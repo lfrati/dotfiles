@@ -1,0 +1,22 @@
+alias rm='echo "This is not the command you are looking for."; false'
+alias vim='nvim'
+alias open='xdg-open'
+alias getsong="youtube-dl -x --output '%(title)s.%(ext)s' --audio-format mp3 -f bestaudio --add-metadata --no-playlist "
+
+# Use lf to switch directories and bind it to ctrl-o
+lfcd () {
+    tmp="$(mktemp)"
+    lf -last-dir-path="$tmp" "$@"
+    if [ -f "$tmp" ]; then
+        dir="$(cat "$tmp")"
+        rm -f "$tmp"
+        [ -d "$dir" ] && [ "$dir" != "$(pwd)" ] && cd "$dir"
+    fi
+}
+# Using ranger instead
+# bindkey -s '^o' 'lfcd\n'
+bindkey -s '^o' 'ranger\n'
+
+# Edit line in vim with ctrl-e:
+autoload edit-command-line; zle -N edit-command-line
+bindkey '^e' edit-command-line
