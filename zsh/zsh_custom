@@ -1,5 +1,6 @@
 alias rm='echo "This is not the command you are looking for."; false'
 alias vim='nvim'
+alias vi='nvim'
 alias open='xdg-open'
 alias getsong="youtube-dl -x --output '%(title)s.%(ext)s' --audio-format mp3 -f bestaudio --add-metadata --no-playlist "
 

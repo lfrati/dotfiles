@@ -45,13 +45,15 @@ floating_modifier $mod
 
 # start a terminal
 # bindsym $mod+Return exec i3-sensible-terminal
-bindsym $mod+Return exec gnome-terminal
+# bindsym $mod+Return exec gnome-terminal
+bindsym $mod+Return exec urxvt 
 
 # kill focused window
 bindsym $mod+Shift+q kill
 
 # Launch Rofi
-bindsym $mod+d exec "rofi -show drun"
+# bindsym $mod+d exec "rofi -show drun"
+bindsym $mod+d exec --no-startup-id "dmenu_run"
 # bindsym $mod+d exec "rofi -show run -modi run#window -show-icons -sidebar-mode -terminal urxvt"
 
 # There also is the (new) i3-dmenu-desktop which only displays applications
@@ -189,8 +191,11 @@ bar {
 # lock screen
 # bindsym $mod+grave exec bash  ~/dotfiles/i3/lock.sh
 # bindsym $mod+Escape exec bash ~/dotfiles/i3/screenoff.sh
+
 # Moving workspaces between screens 
 bindsym $mod+m move workspace to output right
+
+focus_follows_mouse no
 
 exec --no-startup-id autossh -M 0 -f -T -N rvacc
 # exec --no-startup-id xrandr --output HDMI-0 --rotate left
@@ -200,3 +205,5 @@ exec_always --no-startup-id setxkbmap -option caps:swapescape
 exec --no-startup-id volumeicon
 exec --no-startup-id dropbox start
 exec --no-startup-id xset b off # turn off annoying beeps every time I search a word in a web page
+exec --no-startup-id mpd
+# TODO ADD MUSIC PLAYING SHORTCUTS

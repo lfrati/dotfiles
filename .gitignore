@@ -6,3 +6,5 @@ mpd/state
 mpd/sticker.sql
 ncmpcpp/error.log
 ssh
+ranger/plugins
+fonts/.uuid
