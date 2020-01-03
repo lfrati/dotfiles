@@ -33,10 +33,10 @@ exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
 
 # Use pactl to adjust volume in PulseAudio.
 set $refresh_i3status killall -SIGUSR1 i3status
+bindsym $super+equal exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5% && $refresh_i3status
+bindsym $super+minus exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5% && $refresh_i3status
 # bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +10% && $refresh_i3status
 # bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -10% && $refresh_i3status
-bindsym $mod+equal exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +10% && $refresh_i3status
-bindsym $mod+minus exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -10% && $refresh_i3status
 # bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle && $refresh_i3status
 # bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOURCE@ toggle && $refresh_i3status
 
@@ -44,9 +44,40 @@ bindsym $mod+minus exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -10
 floating_modifier $mod
 
 # start a terminal
-# bindsym $mod+Return exec i3-sensible-terminal
+bindsym $mod+Return exec i3-sensible-terminal
 # bindsym $mod+Return exec gnome-terminal
-bindsym $mod+Return exec urxvt 
+# bindsym $mod+Return exec urxvt 
+
+# i3-sensible-terminal checks the following terminals in this order:
+#
+# $TERMINAL (this is a non-standard variable)
+# x-terminal-emulator (only present on Debian and derivatives)
+# urxvt
+# rxvt
+# termit
+# terminator
+# Eterm
+# aterm
+# uxterm
+# xterm
+# gnome-terminal
+# roxterm
+# xfce4-terminal
+# termite
+# lxterminal
+# mate-terminal
+# terminology
+# st
+# qterminal
+# lilyterm
+# tilix
+# terminix
+# konsole
+# kitty
+# guake
+# tilda
+# alacritty
+# hyper
 
 # kill focused window
 bindsym $mod+Shift+q kill
@@ -188,22 +219,41 @@ bar {
         status_command i3status
 }
 
-# lock screen
+focus_follows_mouse no
+
+##############################################################
+# MY BINDINGS ################################################
+##############################################################
+
+# lock screen, wasted hours to get the transparency, never used
 # bindsym $mod+grave exec bash  ~/dotfiles/i3/lock.sh
 # bindsym $mod+Escape exec bash ~/dotfiles/i3/screenoff.sh
 
 # Moving workspaces between screens 
 bindsym $mod+m move workspace to output right
 
-focus_follows_mouse no
+# use F[9,10,11,12] for prev,pause,play,next
+bindsym F9 exec mpc prev
+bindsym F10 exec mpc pause
+bindsym F11 exec mpc play
+bindsym F12 exec mpc next
+
+# Use print button (finally found a use for it) to save a screenshot of the current focused screen
+bindsym Print       exec flameshot screen -p /home/lapo/Pictures/screenshots
+bindsym Shift+Print exec flameshot gui
+
+##############################################################
+# MY STARTUP  ################################################
+##############################################################
 
 exec --no-startup-id autossh -M 0 -f -T -N rvacc
-# exec --no-startup-id xrandr --output HDMI-0 --rotate left
 exec --no-startup-id xrandr --output HDMI-0 --auto --right-of DVI-D-0 --rotate left
-exec_always --no-startup-id feh --bg-center /home/lapo/dotfiles/archwall.png -bg-center /home/lapo/dotfiles/arch_vert.png
+exec_always --no-startup-id feh --bg-center /home/lapo/dotfiles/archwall.png --bg-center /home/lapo/dotfiles/arch_vert.png
 exec_always --no-startup-id setxkbmap -option caps:swapescape 
 exec --no-startup-id volumeicon
 exec --no-startup-id dropbox start
 exec --no-startup-id xset b off # turn off annoying beeps every time I search a word in a web page
-exec --no-startup-id mpd
-# TODO ADD MUSIC PLAYING SHORTCUTS
+exec --no-startup-id mpd # music demon to control with mpc and connect to with ncmpcpp
+exec --no-startup-id dunst # notification daemon, supports html, notify-send...
+
+exec --no-startup-id urxvt -hold -e sh /home/lapo/dotfiles/dashboard.sh

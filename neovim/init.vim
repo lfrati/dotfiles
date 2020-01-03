@@ -1,4 +1,5 @@
 " vim: fdm=marker
+" 
 "
 " ███╗   ██╗███████╗ ██████╗ ██╗   ██╗██╗███╗   ███╗
 " ████╗  ██║██╔════╝██╔═══██╗██║   ██║██║████╗ ████║
@@ -33,47 +34,52 @@ let maplocalleader=' '
 " ============================================================================
 call plug#begin('~/.vim/plugged')
 
-" Code completion & highlighting
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
-Plug 'sheerun/vim-polyglot'     " better syntax highlight
+" Syntax highlighting
+Plug 'sheerun/vim-polyglot'          " better syntax highlight
 
 " Editing
 Plug 'tpope/vim-surround'            " cs surrounding capabilities eg. cs)], csw'  
-Plug 'tpope/vim-commentary'          " gc+motion to comment
 Plug 'christoomey/vim-system-copy'   " cp/cv for copy paste e.g. cvi = paste inside '
-Plug 'terryma/vim-multiple-cursors'  " very cool but seems kinda buggy
 Plug 'junegunn/vim-easy-align'       " sounds super cool, never used so far
-Plug 'kassio/neoterm'                " copy code to Ipython terminal
 Plug 'sbdchd/vim-shebang'            " automatically add #! stuff to files
+Plug 'tpope/vim-commentary'          " gc code away
+Plug 'tmhedberg/SimpylFold'          " Better folding
+Plug 'Konfekt/FastFold'              " Suggested by SimplyFold to improve speed
+" Plug 'terryma/vim-multiple-cursors'  " very cool but seems kinda buggy
 
 " Tags management
 Plug 'universal-ctags/ctags'
 Plug 'ludovicchabant/vim-gutentags'
-Plug 'powerline/powerline'
+Plug 'majutsushi/tagbar'
+
+" Organization
+Plug 'vimwiki/vimwiki'
+Plug 'itchyny/calendar.vim'
 
 " Appearance
-Plug 'joshdick/onedark.vim'     " atom inpspired true color theme
-Plug 'itchyny/lightline.vim'    " lightweight status line
-Plug 'ap/vim-buftabline'        " Show open buffers
-Plug 'ryanoasis/vim-devicons'   " DevIcons for some plugins
-Plug 'tpope/vim-fugitive'       " For git-awareness 
-Plug 'tmhedberg/SimpylFold'     " Better folding
-Plug 'Konfekt/FastFold'         " Suggested by SimplyFold to improve speed
+Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
+Plug 'itchyny/lightline.vim'        " lightweight status line
+Plug 'ap/vim-buftabline'            " Show open buffers
+Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
+Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
 
 " Navigation
+" Plug 'kien/ctrlp.vim'
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
+Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands) 
 Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
-Plug 'kien/ctrlp.vim'
-Plug 'scrooloose/nerdtree'
+Plug 'scrooloose/nerdtree'       " better netrw vim navigation
+Plug 'mbbill/undotree'           " More easily navigate vim's poweful undo tree
+
 Plug 'tpope/vim-repeat'          " Allows repeating some plugins operations using .
-
-
+Plug 'kassio/neoterm'            " easier terminal management in vim
+Plug 'SirVer/ultisnips'          " custom snippets
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
 
 " ============================================================================
-" Lightline {{{1
+" Lightline {{{2
 " ============================================================================
 set noshowmode " Not needed since the mode is shown in lighline
 let g:lightline = {
@@ -103,7 +109,7 @@ function! LightlineFilename()
 endfunction
 
 " ============================================================================
-" BufTabLine {{{1
+" BufTabLine {{{2
 " ============================================================================
 let g:buftabline_numbers=2      " Show ordinal tab numbers (not the vim buffer ones)
 " Doesn't display correct with CascadiaCode Nerd Font
@@ -122,17 +128,71 @@ nmap <leader>9 <Plug>BufTabLine.Go(9)
 nnoremap <Leader>- :bd<Cr>
 
 " ============================================================================
-" CtrlP {{{1
+" tagbar {{{2
 " ============================================================================
-set wildignore+=*/.git/*,*/tmp/*,*.swp,*.so,*.zip
-if executable('rg')
-  set grepprg=rg\ --color=never
-  let g:ctrlp_user_command = 'rg %s --files --color=never --glob ""'
-  let g:ctrlp_use_caching = 0
-endif
+
+nmap <F6> :TagbarToggle<CR>
+let g:tagbar_autofocus = 1
 
 " ============================================================================
-" EasyMotion {{{1
+" CtrlP {{{2
+" ============================================================================
+" if executable('rg')
+"   set grepprg=rg\ --color=never
+"   let g:ctrlp_user_command = 'rg %s --files --color=never --glob ""'
+"   let g:ctrlp_use_caching = 0
+" endif
+
+" ============================================================================
+" UltiSnips {{{2
+" ============================================================================
+
+" Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
+let g:UltiSnipsExpandTrigger="<tab>"
+let g:UltiSnipsJumpForwardTrigger="<tab>"
+let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
+
+let g:UltiSnipsSnippetDirectories=[$HOME.'/dotfiles/neovim/UltiSnips']
+
+" ============================================================================
+" vimwiki {{{2
+" ============================================================================
+set nocompatible
+filetype plugin on
+syntax on
+
+augroup vimwikibynds
+    autocmd FileType vimwiki imap <buffer><silent> <c-t> <Plug>VimwikiIncreaseLvlWholeItem
+    autocmd FileType vimwiki imap <buffer><silent> <c-d> <Plug>VimwikiDecreaseLvlWholeItem
+augroup end
+
+let $VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
+
+function! s:QuickNote()
+  py import uuid
+  let l:id = pyeval('str(uuid.uuid4())')
+  let l:path = $VIMWIKI_DIR . "/note.". l:id . ".wiki"
+  execute "e " . l:path
+  startinsert
+endfunction
+
+nmap <leader>no :call <SID>QuickNote()<CR>
+
+let g:vimwiki_folding='expr'
+let g:vimwiki_table_mappings=0 " Prevent conflict with UltiSnips tab completion
+let g:vimwiki_list = [{'auto_tags': 1, 'auto_diary_index': 1}]
+let g:tagbar_type_vimwiki = {
+          \   'ctagstype':'vimwiki'
+          \ , 'kinds':['h:header:1']
+          \ , 'sro':'&&&'
+          \ , 'kind2scope':{'h':'header'}
+          \ , 'sort':0
+          \ , 'ctagsbin':'/home/lapo/dotfiles/neovim/vwtags.py'
+          \ , 'ctagsargs': 'default'
+          \ }
+
+" ============================================================================
+" EasyMotion {{{2
 " ============================================================================
 set nohlsearch " easymotion will do the highlighting
 " Use easymotion to search 
@@ -141,13 +201,15 @@ omap / <Plug>(easymotion-tn)
 " These `n` & `N` mappings are options. You do not have to map `n` & `N` to EasyMotion.
 " Without these mappings, `n` & `N` works fine. (These mappings just provide
 " different highlight method and have some other features )
-map  n <Plug>(easymotion-next)
-map  N <Plug>(easymotion-prev)
+" map  n <Plug>(easymotion-next)
+" map  N <Plug>(easymotion-prev)
+map  <C-w> <Plug>(easymotion-next)
+map  <C-e> <Plug>(easymotion-prev)
 " Turn on case-insensitive feature
 let g:EasyMotion_smartcase = 1
 
 " ============================================================================
-" FZF {{{1
+" FZF {{{2
 " ============================================================================
 " Customize fzf colors to match your color scheme
 let g:fzf_colors =
@@ -165,12 +227,13 @@ let g:fzf_colors =
   \ 'spinner': ['fg', 'Label'],
   \ 'header':  ['fg', 'Comment'] }
 
+" Use FZF to search in current file dir with preview
 command! -bang -nargs=? -complete=dir Files
     \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
+nnoremap <c-s> :Files<CR>
 
-" Use FZF to search in current file dir with preview
-nnoremap <c-f> :Files<CR>
-
+" Offload interactive search to Rg, use FzF only as a wrapper around it, also
+" add preview
 " USES FUGITIVE FOR HANDLING GIT
 function! GitAwarePath()
   let root = fnamemodify(get(b:, 'git_dir'), ':h')
@@ -180,8 +243,6 @@ function! GitAwarePath()
   endif
   return path
 endfunction
-" Offload interactive search to Rg, use FzF only as a wrapper around it, also
-" add preview
 function! RipgrepFzf(query, fullscreen)
   let command_fmt = 'rg --column --line-number --no-heading --color=always --smart-case %s || true'
   let initial_command = printf(command_fmt, shellescape(a:query))
@@ -203,19 +264,18 @@ command! -nargs=* -bang Rg call RipgrepFzf(<q-args>, <bang>0)
 " Use RipGrep to search inside files
 nnoremap <c-g> :Rg<CR>
 
-" ============================================================================
-" vim-multiple-cursor {{{1
-" ============================================================================
-let g:multi_cursor_use_default_mapping=0
 
-" Default mapping
-let g:multi_cursor_start_word_key = '<C-s>'
-let g:multi_cursor_next_key       = '<C-s>'
-let g:multi_cursor_skip_key       = '<C-x>'
-let g:multi_cursor_quit_key       = '<Esc>'
+" When fzf starts in a terminal buffer, the file type of the buffer is set to fzf. So you can set up FileType fzf autocmd to 
+" customize the settings of the window.For example, if you use the default layout ({'down': '~40%'}) on Neovim, you might 
+" want to temporarily disable the statusline for a cleaner look.
+if has('nvim') && !exists('g:fzf_layout')
+  autocmd! FileType fzf
+  autocmd  FileType fzf set laststatus=0 noshowmode noruler
+    \| autocmd BufLeave <buffer> set laststatus=2 showmode ruler
+endif
 
 " ============================================================================
-" vim-easy-align {{{1
+" vim-easy-align {{{2
 " ============================================================================
 " Start interactive EasyAlign in visual mode (e.g. vipga)
 xmap ga <Plug>(EasyAlign)
@@ -223,7 +283,7 @@ xmap ga <Plug>(EasyAlign)
 nmap ga <Plug>(EasyAlign)
 
 " ============================================================================
-" gutentags {{{1
+" gutentags {{{2
 " ============================================================================
 " augroup MyGutentagsStatusLineRefresher
 "     autocmd!
@@ -234,32 +294,61 @@ nmap ga <Plug>(EasyAlign)
 let g:gutentags_cache_dir = '~/.tags_dir'
 
 " ============================================================================
-" NeoTerm {{{1
+" NeoTerm {{{2
 " ============================================================================
-let g:neoterm_repl_python= '/home/lapo/miniconda3/envs/deep/bin/ipython --no-autoindent --pylab'
-let g:neoterm_eof="\r"
+let g:neoterm_direct_open_repl=1
+let g:neoterm_repl_python='/home/lapo/miniconda3/envs/deep/bin/ipython --no-autoindent --pylab'
 
-let g:neoterm_default_mod= ':vertical'
+let g:neoterm_default_mod=':vertical'
 let g:neoterm_size=80
 let g:neoterm_autoscroll=1
 
-nnoremap <leader>t :TREPLSendLine<CR>
-nnoremap <leader>T :TREPLSendFile<CR>
-vnoremap <leader>t :TREPLSendSelection<CR>
+function! IPythonLoadCurrentFile()
+  " Get absolute path of current file
+  let path = expand('%:p')
+  " Send ipython magic to load current file, . does string concatenation
+  execute "T %load " . path
+  " I have no idea how to send the final newline, I'll use another magic as a
+  " hack, people like seeing time and shit anyways.
+  execute "T %time"
+endfunction
+
+function! IPythonLoadCurrentLine()
+  " yank current line to clipboard
+  normal! "+yy
+  " paste in python REPL from clipboard using %paste magic
+  execute "T %paste"
+  " move down a line to chain multiple calls easily
+  normal! j
+endfunction
+
+" Without range it will call the function for every line in the range
+function! IPythonLoadCurrentVisualSelection() range
+  " The range has been yanked to clipboard already
+  execute "T %paste"
+  " Move to the end of visual selection and then down a line, see :h `> for
+  " info
+  normal! `>j
+endfunction
+
+nnoremap <leader>t :call IPythonLoadCurrentLine()<CR>
+vnoremap <leader>t "+y<CR>:call IPythonLoadCurrentVisualSelection()<CR>
+nnoremap <leader>T :call IPythonLoadCurrentFile()<CR>
+
 tnoremap <ESC> <C-\><C-n>
 
 " ============================================================================
-" NERDTree {{{1
+" NERDTree {{{2
 " ============================================================================
-" silent! nmap <C-p> :NERDTreeToggle<CR>
-" silent! map <F3> :NERDTreeFind<CR>
+silent! nmap <F7> :NERDTreeToggle<CR>
 
 " let g:NERDTreeMapActivateNode="<F3>"
 " let g:NERDTreeMapPreview="<F4>"
 
 " ============================================================================
-" vim-shebang {{{1
+" vim-shebang {{{2
 " ============================================================================
+"
 " Define my common Shebang
 let g:shebang#shebangs = {
             \ 'julia': '#!/usr/bin/env julia',
@@ -269,147 +358,44 @@ let g:shebang#shebangs = {
             \}
 
 " ============================================================================
-" SimplyFold {{{1
+" SimplyFold {{{2
 " ============================================================================
 
 let g:SimpylFold_docstring_preview=1
+set foldmethod=indent
+set foldlevel=99
 
 " ============================================================================
-" COC {{{1 https://github.com/neoclide/coc.nvim
+" vim-undotree {{{2
 " ============================================================================
 
-" Some servers have issues with backup files, see #649
-set nobackup
-set nowritebackup
+if has("persistent_undo")
+    set undodir=~/.local/share/nvim/undodir
+    set undofile
+    set backupdir=~/.local/share/nvim/backupdir " Don't put backups in current dir
+    set backup
+    set noswapfile
+endif
 
-" Better display for messages
-set cmdheight=2
+nnoremap <F5> :UndotreeToggle<cr>
 
-" You will have bad experience for diagnostic messages when it's default 4000.
-set updatetime=300
+if !exists("*Undotree_CustomMap")
+  " use lower case j/k to navigate
+  function g:Undotree_CustomMap()
+        nmap <buffer> k <plug>UndotreeNextState
+        nmap <buffer> j <plug>UndotreePreviousState
+  endfunc
+endif
 
-" don't give |ins-completion-menu| messages.
-set shortmess+=c
+let g:undotree_SetFocusWhenToggle = 1
 
-" always show signcolumns
-set signcolumn=yes
+" ============================================================================
+" vim_current_word {{{2
+" ============================================================================
 
-" Use tab for trigger completion with characters ahead and navigate.
-" Use command ':verbose imap <tab>' to make sure tab is not mapped by other plugin.
-inoremap <silent><expr> <TAB>
-      \ pumvisible() ? "\<C-n>" :
-      \ <SID>check_back_space() ? "\<TAB>" :
-      \ coc#refresh()
-inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
-
-function! s:check_back_space() abort
-  let col = col('.') - 1
-  return !col || getline('.')[col - 1]  =~# '\s'
-endfunction
-
-" Use <c-space> to trigger completion.
-inoremap <silent><expr> <c-space> coc#refresh()
-
-" Use <cr> to confirm completion, `<C-g>u` means break undo chain at current position.
-" Coc only does snippet and additional edit on confirm.
-inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
-" Or use `complete_info` if your vim support it, like:
-" inoremap <expr> <cr> complete_info()["selected"] != "-1" ? "\<C-y>" : "\<C-g>u\<CR>"
-
-" Use `[g` and `]g` to navigate diagnostics
-nmap <silent> [g <Plug>(coc-diagnostic-prev)
-nmap <silent> ]g <Plug>(coc-diagnostic-next)
-
-" Remap keys for gotos
-nmap <silent> gd <Plug>(coc-definition)
-nmap <silent> gy <Plug>(coc-type-definition)
-nmap <silent> gi <Plug>(coc-implementation)
-nmap <silent> gr <Plug>(coc-references)
-
-" Use K to show documentation in preview window
-nnoremap <silent> K :call <SID>show_documentation()<CR>
-
-function! s:show_documentation()
-  if (index(['vim','help'], &filetype) >= 0)
-    execute 'h '.expand('<cword>')
-  else
-    call CocAction('doHover')
-  endif
-endfunction
-
-" Highlight symbol under cursor on CursorHold
-autocmd CursorHold * silent call CocActionAsync('highlight')
-
-" Remap for rename current word
-nmap <leader>rn <Plug>(coc-rename)
-
-" Remap for format selected region
-xmap <leader>f  <Plug>(coc-format-selected)
-nmap <leader>f  <Plug>(coc-format-selected)
-
-augroup mygroup
-  autocmd!
-  " Setup formatexpr specified filetype(s).
-  autocmd FileType typescript,json setl formatexpr=CocAction('formatSelected')
-  " Update signature help on jump placeholder
-  autocmd User CocJumpPlaceholder call CocActionAsync('showSignatureHelp')
-augroup end
-
-" Remap for do codeAction of selected region, ex: `<leader>aap` for current paragraph
-xmap <leader>a  <Plug>(coc-codeaction-selected)
-nmap <leader>a  <Plug>(coc-codeaction-selected)
-
-" Remap for do codeAction of current line
-nmap <leader>ac  <Plug>(coc-codeaction)
-" Fix autofix problem of current line
-nmap <leader>qf  <Plug>(coc-fix-current)
-
-" Create mappings for function text object, requires document symbols feature of languageserver.
-xmap if <Plug>(coc-funcobj-i)
-xmap af <Plug>(coc-funcobj-a)
-omap if <Plug>(coc-funcobj-i)
-omap af <Plug>(coc-funcobj-a)
-
-" Use <C-d> for select selections ranges, needs server support, like: coc-tsserver, coc-python
-" NO IDEA WHAT SELECTION RANGES ARE
-" nmap <silent> <C-d> <Plug>(coc-range-select)
-" xmap <silent> <C-d> <Plug>(coc-range-select)
-
-" Use `:Format` to format current buffer
-command! -nargs=0 Format :call CocAction('format')
-
-" Use `:Fold` to fold current buffer
-command! -nargs=? Fold :call     CocAction('fold', <f-args>)
-
-" use `:OR` for organize import of current buffer
-command! -nargs=0 OR   :call     CocAction('runCommand', 'editor.action.organizeImport')
-
-" Add status line support, for integration with other plugin, checkout `:h coc-status`
-set statusline^=%{coc#status()}%{get(b:,'coc_current_function','')}
-
-" Using CocList
-" Show all diagnostics
-nnoremap <silent> <space>a  :<C-u>CocList diagnostics<cr>
-" Manage extensions
-nnoremap <silent> <space>e  :<C-u>CocList extensions<cr>
-" Show commands
-nnoremap <silent> <space>c  :<C-u>CocList commands<cr>
-" Find symbol of current document
-nnoremap <silent> <space>o  :<C-u>CocList outline<cr>
-" Search workspace symbols
-nnoremap <silent> <space>s  :<C-u>CocList -I symbols<cr>
-" Do default action for next item.
-nnoremap <silent> <space>j  :<C-u>CocNext<CR>
-" Do default action for previous item.
-nnoremap <silent> <space>k  :<C-u>CocPrev<CR>
-" Resume latest coc list
-nnoremap <silent> <space>p  :<C-u>CocListResume<CR>
-
-" COC Prettier
-command! -nargs=0 Prettier :CocCommand prettier.formatFile
-
-set updatetime=300 " You will have bad experience for diagnostic messages when it's default 4000. (COC)
-set shortmess+=c " don't give ins-completion-menu messages. (COC)
+" Added some colors at the end of file
+" hi CurrentWord ctermbg=236
+" hi CurrentWordTwins ctermbg=237
 
 " ============================================================================
 " UI Layout {{{1
@@ -442,7 +428,6 @@ set background=dark " Because dark is cool
 set encoding=utf8
 colorscheme onedark " Tomorrow-Night-Eighties
 
-
 " ============================================================================
 " Basic settings {{{1
 " ============================================================================
@@ -470,8 +455,21 @@ set smartcase                          " ...unless we type a capital
 set history=1000                       " Remember more commands and search history
 set undolevels=1000                    " Use many muchos levels of undo
 set mouse=a                            " Enable use of the mouse for all modes
-set autoread                           " Reload files changed outside vim
 set notimeout ttimeout ttimeoutlen=200 " Quickly time out on keycodes, but never time out on mappings
+set completeopt+=menuone,noselect,noinsert,preview " show popup menu when at least one match but don't insert stuff
+set complete=.,w,b,u,t,kspell        " Check file -> window -> buffer -> hidden buffers -> tabs -> spelling if enabled
+set omnifunc=syntaxcomplete#Complete " On <c-x><c-o> use the file syntax to guess possible completions
+set autoread                           " Reload files changed outside vim
+
+" Wildmenu
+if has("wildmenu")
+    set wildignore+=*.a,*.o
+    set wildignore+=*.bmp,*.gif,*.ico,*.jpg,*.png
+    set wildignore+=.DS_Store,.git,.hg,.svn
+    set wildignore+=*~,*.swp,*.tmp
+    set wildmenu
+    set wildmode=longest,list
+endif
 
 " When opening a new line and no filetype-specific indenting is enabled, keep
 " the same indent as the line you're currently on. Useful for READMEs, etc.
@@ -504,15 +502,8 @@ set confirm
 " let :s/:%s show incremental highlight of matches in a temporary split
 set inccommand=split
 
-" Set backups --> CONFLICT WITH COC.NVIM plugin 
-" if has('persistent_undo') 
-"     set undofile 
-"     set undolevels=3000 
-"     set undoreload=10000
-" endif
-" set backupdir=~/.local/share/nvim/backup " Don't put backups in current dir
-" set backup
-" set noswapfile
+let g:python3_host_prog="/home/lapo/miniconda3/envs/neovim3/bin/python"
+let g:python_host_prog="/home/lapo/miniconda3/envs/neovim2/bin/python"
 
 " Allows you to save files you opened without write permissions via sudo
 " cmap w!! w !sudo tee %
@@ -537,6 +528,10 @@ set splitright
 " nnoremap ; :
 " nnoremap : ;
 
+" Use capital W as a shortcut to save
+nnoremap W :w<CR>
+nnoremap Q :q<CR>
+
 " center current line after jumping to prev/next locations
 nnoremap <C-o> <C-o>zz
 nnoremap <C-i> <C-i>zz
@@ -546,3 +541,14 @@ noremap <Up> <Nop>
 noremap <Down> <Nop>
 noremap <Left> <Nop>
 noremap <Right> <Nop>
+
+" ============================================================================
+" Custom colors {{{1
+" ============================================================================
+" At the bottom to override themes and shit
+
+hi CurrentWord ctermbg=236
+hi VimwikiLink ctermfg=39 cterm=underline
+" Use terminal background color to customize (no more trying to match both
+" because of vim's uneven borders)
+hi Normal guibg=NONE ctermbg=NONE
