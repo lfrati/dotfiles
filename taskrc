@@ -1,0 +1,81 @@
+# [Created by task 2.5.1 1/6/2020 13:05:06]
+# Taskwarrior program configuration file.
+# For more documentation, see http://taskwarrior.org or try 'man task', 'man task-color',
+# 'man task-sync' or 'man taskrc'
+
+# Here is an example of entries that use the default, override and blank values
+#   variable=foo   -- By specifying a value, this overrides the default
+#   variable=      -- By specifying no value, this means no default
+#   #variable=foo  -- By commenting out the line, or deleting it, this uses the default
+
+# Use the command 'task show' to see all defaults and overrides
+
+# Files
+data.location=~/.task
+
+# Terminal
+curses=on                              # Use ncurses library to determine terminal width
+editor=nvim                            # Preferred text editor
+
+# Miscellaneous
+confirmation=yes                       # Confirmation on delete, big changes
+echo.command=yes                       # Details on command just run
+#next=2                                 # How many tasks per project in next report
+bulk=2                                 # > 2 tasks considered 'a lot', for confirmation
+nag=You have higher priority tasks.    # Nag message to keep you honest
+
+# Dates
+dateformat=Y/m/d                       # Preferred input and display date format
+weekstart=Monday                       # Sunday or Monday only
+displayweeknumber=yes                  # Show week numbers on calendar
+due=7                                  # Task is considered due in 7 days
+#monthsperline=2                       # Number of calendar months on a line
+
+# Color controls.
+color=on                               # Use color
+#color.overdue=bold_red                 # Color of overdue tasks
+#color.due=bold_yellow                  # Color of due tasks
+#color.pri.H=bold                       # Color of priority:H tasks
+#color.pri.M=on_yellow                 # Color of priority:M tasks
+#color.pri.L=on_green                  # Color of priority:L tasks
+#color.pri.none=white on_blue          # Color of priority:  tasks
+#color.active=bold_cyan                # Color of active tasks
+#color.tagged=yellow                    # Color of tagged tasks
+#color.tag.bug=yellow                  # Color of +bug tasks
+#color.project.garden=on_green         # Color of project:garden tasks
+#color.keyword.car=on_blue             # Color of description.contains:car tasks
+#color.recurring=on_red                # Color of recur.any: tasks
+#color.header=bold_green               # Color of header messages
+#color.footnote=bold_green             # Color of footnote messages
+
+#shadow.file=/tmp/shadow.txt           # Location of shadow file
+#shadow.command=list                   # Task command for shadow file
+#shadow.notify=on                      # Footnote when updated
+
+#default.project=foo                   # Unless otherwise specified
+#default.priority=M                    # Unless otherwise specified
+default.command=list                   # Unless otherwise specified
+
+# next report: don't show annotations
+report.next.columns=id,start.age,entry.age,depends,priority,project,tags,recur,scheduled.countdown,due.relative,until.remaining,description.count,urgency
+
+# Child tasks inherit their parent's urgency if that's higher.
+urgency.inherit=on
+
+# Color theme (uncomment one to use)
+#include /usr/share/doc/task/rc/light-16.theme
+#include /usr/share/doc/task/rc/light-256.theme
+#include /usr/share/doc/task/rc/dark-16.theme
+#include /usr/share/doc/task/rc/dark-256.theme
+#include /usr/share/doc/task/rc/dark-red-256.theme
+#include /usr/share/doc/task/rc/dark-green-256.theme
+#include /usr/share/doc/task/rc/dark-blue-256.theme
+#include /usr/share/doc/task/rc/dark-violets-256.theme
+#include /usr/share/doc/task/rc/dark-yellow-green.theme
+#include /usr/share/doc/task/rc/dark-gray-256.theme
+#include /usr/share/doc/task/rc/dark-gray-blue-256.theme
+#include /usr/share/doc/task/rc/solarized-dark-256.theme
+#include /usr/share/doc/task/rc/solarized-light-256.theme
+#include /usr/share/doc/task/rc/no-color.theme
+include ~/.task/antiglare.theme
+context.work=project:research

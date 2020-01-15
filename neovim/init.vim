@@ -1,5 +1,4 @@
 " vim: fdm=marker
-" 
 "
 " ███╗   ██╗███████╗ ██████╗ ██╗   ██╗██╗███╗   ███╗
 " ████╗  ██║██╔════╝██╔═══██╗██║   ██║██║████╗ ████║
@@ -34,16 +33,20 @@ let maplocalleader=' '
 " ============================================================================
 call plug#begin('~/.vim/plugged')
 
-" Syntax highlighting
+" Syntax highlighting & formatting
 Plug 'sheerun/vim-polyglot'          " better syntax highlight
+" post install (yarn install | npm install) then load plugin only for editing supported files
+Plug 'prettier/vim-prettier', {
+  \ 'do': 'yarn install',
+  \ 'for': ['javascript', 'typescript', 'css', 'less', 'scss', 'json', 'graphql', 'markdown', 'vue', 'yaml', 'html'] }
 
 " Editing
-Plug 'tpope/vim-surround'            " cs surrounding capabilities eg. cs)], csw'  
+Plug 'tpope/vim-surround'            " cs surrounding capabilities eg. cs)], csw'
 Plug 'christoomey/vim-system-copy'   " cp/cv for copy paste e.g. cvi = paste inside '
 Plug 'junegunn/vim-easy-align'       " sounds super cool, never used so far
 Plug 'sbdchd/vim-shebang'            " automatically add #! stuff to files
 Plug 'tpope/vim-commentary'          " gc code away
-Plug 'tmhedberg/SimpylFold'          " Better folding
+Plug 'tmhedberg/SimpylFold'          " Better Python folding
 Plug 'Konfekt/FastFold'              " Suggested by SimplyFold to improve speed
 " Plug 'terryma/vim-multiple-cursors'  " very cool but seems kinda buggy
 
@@ -53,7 +56,9 @@ Plug 'ludovicchabant/vim-gutentags'
 Plug 'majutsushi/tagbar'
 
 " Organization
-Plug 'vimwiki/vimwiki'
+Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
+" TODO
+" Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
 Plug 'itchyny/calendar.vim'
 
 " Appearance
@@ -63,11 +68,15 @@ Plug 'ap/vim-buftabline'            " Show open buffers
 Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
 Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
 
+" Zen mode
+Plug 'junegunn/goyo.vim'
+Plug 'junegunn/limelight.vim'
+
 " Navigation
 " Plug 'kien/ctrlp.vim'
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'junegunn/fzf.vim'
-Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands) 
+Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
 Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
 Plug 'scrooloose/nerdtree'       " better netrw vim navigation
 Plug 'mbbill/undotree'           " More easily navigate vim's poweful undo tree
@@ -75,13 +84,24 @@ Plug 'mbbill/undotree'           " More easily navigate vim's poweful undo tree
 Plug 'tpope/vim-repeat'          " Allows repeating some plugins operations using .
 Plug 'kassio/neoterm'            " easier terminal management in vim
 Plug 'SirVer/ultisnips'          " custom snippets
+
+" Experimental
+Plug 'ajh17/VimCompletesMe'
+
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
 
 " ============================================================================
+" vim-prettier {{{2
+" ============================================================================
+
+" let g:prettier#autoformat = 0
+" autocmd InsertLeave *.js,*.jsx,*.mjs,*.ts,*.tsx,*.css,*.less,*.scss,*.json,*.graphql,*.md,*.vue,*.yaml,*.html PrettierAsync
+
+" ============================================================================
 " Lightline {{{2
 " ============================================================================
-set noshowmode " Not needed since the mode is shown in lighline
+" set noshowmode " Not needed since the mode is shown in lighline
 let g:lightline = {
       \ 'colorscheme': 'onedark',
       \ 'active': {
@@ -106,6 +126,20 @@ function! LightlineFilename()
     return path[len(root)+1:]
   endif
   return expand('%')
+endfunction
+
+autocmd! VimEnter * call SetupLightlineColors()
+function SetupLightlineColors() abort
+  " transparent background in statusbar
+  let l:palette = lightline#palette()
+
+                                     "guibg,    guifg,   ctermbg, ctermfg"
+  let l:palette.normal.middle = [ [ '#ABB2BF', '#282C34', '235', '174' ] ]
+  " let l:palette.normal.middle = [ [ '#ABB2BF', '#282C34', '145', '235' ] ]
+  let l:palette.inactive.middle = [ [ '#ABB2BF', '#282C34', '145', '146' ] ]
+  " let l:palette.tabline.middle = l:palette.normal.middle
+
+  call lightline#colorscheme()
 endfunction
 
 " ============================================================================
@@ -148,9 +182,9 @@ let g:tagbar_autofocus = 1
 " ============================================================================
 
 " Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
-let g:UltiSnipsExpandTrigger="<tab>"
-let g:UltiSnipsJumpForwardTrigger="<tab>"
-let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
+let g:UltiSnipsExpandTrigger="<C-u>"
+let g:UltiSnipsJumpForwardTrigger="<C-n>"
+let g:UltiSnipsJumpBackwardTrigger="<C-p>"
 
 let g:UltiSnipsSnippetDirectories=[$HOME.'/dotfiles/neovim/UltiSnips']
 
@@ -161,50 +195,55 @@ set nocompatible
 filetype plugin on
 syntax on
 
-augroup vimwikibynds
-    autocmd FileType vimwiki imap <buffer><silent> <c-t> <Plug>VimwikiIncreaseLvlWholeItem
-    autocmd FileType vimwiki imap <buffer><silent> <c-d> <Plug>VimwikiDecreaseLvlWholeItem
+augroup vimwikicmds
+    " the second autocmd is executed only for matching filetypes
+    autocmd FileType vimwiki
+        \ autocmd InsertLeave <buffer> :update
 augroup end
 
 let $VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
 
-function! s:QuickNote()
+function! s:QuickNote ()
   py import uuid
-  let l:id = pyeval('str(uuid.uuid4())')
-  let l:path = $VIMWIKI_DIR . "/note.". l:id . ".wiki"
+  let l:id = pyeval('str(uuid.uuid4())[24:]')
+  let l:path = $VIMWIKI_DIR . "/note.". l:id . ".md"
   execute "e " . l:path
-  startinsert
+  execute "normal! inote\<C-R>=UltiSnips#ExpandSnippet()\<CR>"
 endfunction
-
 nmap <leader>no :call <SID>QuickNote()<CR>
 
 let g:vimwiki_folding='expr'
 let g:vimwiki_table_mappings=0 " Prevent conflict with UltiSnips tab completion
-let g:vimwiki_list = [{'auto_tags': 1, 'auto_diary_index': 1}]
+let g:vimwiki_list = [{'path': '~/Dropbox/vimwiki/',
+                      \ 'syntax': 'markdown',
+                      \ 'ext': '.md',
+                      \ 'auto_tags': 1,
+                      \ 'auto_diary_index': 1,
+                      \ 'custom_wiki2html': '/home/lapo/dotfiles/neovim/wiki2html.sh'}]
 let g:tagbar_type_vimwiki = {
           \   'ctagstype':'vimwiki'
-          \ , 'kinds':['h:header:1']
+          \ , 'kinds':['h:header']
           \ , 'sro':'&&&'
           \ , 'kind2scope':{'h':'header'}
           \ , 'sort':0
           \ , 'ctagsbin':'/home/lapo/dotfiles/neovim/vwtags.py'
-          \ , 'ctagsargs': 'default'
+          \ , 'ctagsargs': 'markdown'
           \ }
 
 " ============================================================================
 " EasyMotion {{{2
 " ============================================================================
 set nohlsearch " easymotion will do the highlighting
-" Use easymotion to search 
+" Use easymotion to search
 map  / <Plug>(easymotion-sn)
 omap / <Plug>(easymotion-tn)
 " These `n` & `N` mappings are options. You do not have to map `n` & `N` to EasyMotion.
 " Without these mappings, `n` & `N` works fine. (These mappings just provide
 " different highlight method and have some other features )
-" map  n <Plug>(easymotion-next)
-" map  N <Plug>(easymotion-prev)
-map  <C-w> <Plug>(easymotion-next)
-map  <C-e> <Plug>(easymotion-prev)
+map  n <Plug>(easymotion-next)
+map  N <Plug>(easymotion-prev)
+" map  <C-w> <Plug>(easymotion-next)
+" map  <C-e> <Plug>(easymotion-prev)
 " Turn on case-insensitive feature
 let g:EasyMotion_smartcase = 1
 
@@ -247,7 +286,7 @@ function! RipgrepFzf(query, fullscreen)
   let command_fmt = 'rg --column --line-number --no-heading --color=always --smart-case %s || true'
   let initial_command = printf(command_fmt, shellescape(a:query))
   let reload_command = printf(command_fmt, '{q}')
-  let path = GitAwarePath() 
+  let path = GitAwarePath()
   echo path
   let spec = {'options': ['--phony', '--query', a:query, '--bind', 'change:reload:'.reload_command],'dir':path}
   call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
@@ -265,8 +304,8 @@ command! -nargs=* -bang Rg call RipgrepFzf(<q-args>, <bang>0)
 nnoremap <c-g> :Rg<CR>
 
 
-" When fzf starts in a terminal buffer, the file type of the buffer is set to fzf. So you can set up FileType fzf autocmd to 
-" customize the settings of the window.For example, if you use the default layout ({'down': '~40%'}) on Neovim, you might 
+" When fzf starts in a terminal buffer, the file type of the buffer is set to fzf. So you can set up FileType fzf autocmd to
+" customize the settings of the window.For example, if you use the default layout ({'down': '~40%'}) on Neovim, you might
 " want to temporarily disable the statusline for a cleaner look.
 if has('nvim') && !exists('g:fzf_layout')
   autocmd! FileType fzf
@@ -370,11 +409,11 @@ set foldlevel=99
 " ============================================================================
 
 if has("persistent_undo")
-    set undodir=~/.local/share/nvim/undodir
+    set undodir=~/.local/share/nvim/undodir//
     set undofile
-    set backupdir=~/.local/share/nvim/backupdir " Don't put backups in current dir
+    set backupdir=~/.local/share/nvim/backupdir// " Don't put backups in current dir
     set backup
-    set noswapfile
+    set directory=~/.local/share/nvim/swapdir//
 endif
 
 nnoremap <F5> :UndotreeToggle<cr>
@@ -396,6 +435,18 @@ let g:undotree_SetFocusWhenToggle = 1
 " Added some colors at the end of file
 " hi CurrentWord ctermbg=236
 " hi CurrentWordTwins ctermbg=237
+
+" ============================================================================
+" Goyo {{{2
+" ============================================================================
+
+autocmd! User GoyoEnter Limelight
+autocmd! User GoyoLeave Limelight!
+
+" ============================================================================
+" limelight {{{2
+" ============================================================================
+let g:limelight_conceal_ctermfg = 237
 
 " ============================================================================
 " UI Layout {{{1
@@ -426,7 +477,7 @@ let g:undotree_SetFocusWhenToggle = 1
 
 set background=dark " Because dark is cool
 set encoding=utf8
-colorscheme onedark " Tomorrow-Night-Eighties
+colorscheme onedark 
 
 " ============================================================================
 " Basic settings {{{1
@@ -442,13 +493,13 @@ set showcmd                            " Show partial commands in the last line 
 set nu                                 " Set both types of NUmbering to get hybrid Relative NUmbering"
 set rnu
 set title                              " Set the terminal title
-" set ruler                              " Display the cursor position
+set ruler                              " Display the cursor position
 " set cursorline                         " Highlight current line to find the cursor more easily
 " set cursorcolumn                       " Highlight current column to find the cursor more easily
 set laststatus=2                       " Always display the status line, even if only one window is displayed
 set cmdheight=2                        " Set the command window height to 2 lines to avoid press <Enter> to continue"
-set list                               " Show newlines and tabs
-set listchars=tab:▸\ ,eol:¬            " Use the same symbols as TextMate for tabstops and EOLs
+" set list                               " Show newlines and tabs
+" set listchars=tab:▸\ ,eol:¬            " Use the same symbols as TextMate for tabstops and EOLs
 set incsearch                          " Find the next match as we type the search
 set ignorecase                         " Ignore case when searching...
 set smartcase                          " ...unless we type a capital
@@ -456,10 +507,21 @@ set history=1000                       " Remember more commands and search histo
 set undolevels=1000                    " Use many muchos levels of undo
 set mouse=a                            " Enable use of the mouse for all modes
 set notimeout ttimeout ttimeoutlen=200 " Quickly time out on keycodes, but never time out on mappings
-set completeopt+=menuone,noselect,noinsert,preview " show popup menu when at least one match but don't insert stuff
-set complete=.,w,b,u,t,kspell        " Check file -> window -> buffer -> hidden buffers -> tabs -> spelling if enabled
+set completeopt=longest,menuone,noselect,noinsert,preview " show popup menu when at least one match but don't insert stuff
+set complete=.,w,b,u,t,kspell        " Check file -> window -> buffer -> hidden buffers -> tags -> spelling if enabled
 set omnifunc=syntaxcomplete#Complete " On <c-x><c-o> use the file syntax to guess possible completions
 set autoread                           " Reload files changed outside vim
+set lazyredraw                         " Don't redraw while executing macros (good performance setting)
+set linebreak                          " Stop annoying 80 chars line wrapping
+set textwidth=500                      "
+
+" Search down into subfolders
+" Provides tab-completion for all file-related tasks
+set path=.,,,**
+
+" Open new split panes to right and bottom, which feels more natural than Vim’s default
+set splitbelow
+set splitright
 
 " Wildmenu
 if has("wildmenu")
@@ -467,9 +529,17 @@ if has("wildmenu")
     set wildignore+=*.bmp,*.gif,*.ico,*.jpg,*.png
     set wildignore+=.DS_Store,.git,.hg,.svn
     set wildignore+=*~,*.swp,*.tmp
+    set wildignore+=*/node_modules/*
     set wildmenu
-    set wildmode=longest,list
+    set wildmode=longest,list,full
 endif
+
+if executable("rg")
+    set grepprg=rg\ --vimgrep\ --no-heading
+    set grepformat=%f:%l:%c:%m,%f:%l:%m
+endif
+
+" set autochdir   " change path to current file, NOTE: SOME PLUGINS MIGHT NOT WORK WITH THIS ON!!!!!
 
 " When opening a new line and no filetype-specific indenting is enabled, keep
 " the same indent as the line you're currently on. Useful for READMEs, etc.
@@ -512,25 +582,48 @@ let g:python_host_prog="/home/lapo/miniconda3/envs/neovim2/bin/python"
 " Mappings {{{1
 " ============================================================================
 
+" easily open and source neovim config file
+nmap <leader>conf :e $MYVIMRC<CR>
+
+" Delete trailing white space on save, useful for some filetypes ;)
+fun! CleanExtraSpaces()
+    let save_cursor = getpos(".")
+    let old_query = getreg('/')
+    silent! %s/\s\+$//e
+    call setpos('.', save_cursor)
+    call setreg('/', old_query)
+endfun
+
+function! EchoWarning(msg)
+  echohl WarningMsg
+  echo  a:msg
+  echohl None
+endfunction
+
+augroup vimrccmds     " Source vim configuration upon save
+    autocmd! BufWritePost $MYVIMRC nested so % | call EchoWarning("Reloaded " . $MYVIMRC) | redraw
+    autocmd! BufWritePre *.txt,*.js,*.py,*.wiki,*.sh,*.coffee :call CleanExtraSpaces()
+augroup END
+
 " Easier split navigation
 nnoremap <C-J> <C-W><C-J>
 nnoremap <C-K> <C-W><C-K>
 nnoremap <C-L> <C-W><C-L>
 nnoremap <C-H> <C-W><C-H>
 
-" Open new split panes to right and bottom, which feels more natural than Vim’s default
-set splitbelow
-set splitright
+" Better navigation of long lines, when wrapping and pressing up/down
+" you might want to that part of the line, not the line above
+" http://bit-101.com/techtips/2018/02/23/Better-cursor-movement-in-vim/
+nnoremap j gj
+nnoremap k gk
 
-" Let's avoid typing :Q ever again
-" Problem, my brain hates having to remember if I'm in a mode where this is
-" remapped or not
-" nnoremap ; :
-" nnoremap : ;
+" Use capital W as a shortcut to save and quit
+" nnoremap W :w<CR>
+" nnoremap Q :q<CR>
+" except... it prevents me to move by full words, let's try the Ctrl combo instead
+nnoremap <C-w> :w<CR> 
+nnoremap <C-Q> :q<CR>
 
-" Use capital W as a shortcut to save
-nnoremap W :w<CR>
-nnoremap Q :q<CR>
 
 " center current line after jumping to prev/next locations
 nnoremap <C-o> <C-o>zz
@@ -542,6 +635,17 @@ noremap <Down> <Nop>
 noremap <Left> <Nop>
 noremap <Right> <Nop>
 
+" DISABLE FUCKING EXMODE UNTIL I FIND A BETTER USE FOR Q
+nmap Q <Nop>
+
+" Switch CWD to the directory of the open buffer
+map <leader>cd :cd %:p:h<cr>:pwd<cr>
+
+" Remap VIM 0 to first non-blank character
+map 0 ^
+
+map <leader>= :e ~/buffer.md<CR>
+
 " ============================================================================
 " Custom colors {{{1
 " ============================================================================
@@ -552,3 +656,32 @@ hi VimwikiLink ctermfg=39 cterm=underline
 " Use terminal background color to customize (no more trying to match both
 " because of vim's uneven borders)
 hi Normal guibg=NONE ctermbg=NONE
+
+
+" ============================================================================
+" Experimental {{{1
+" ============================================================================
+
+" from https://github.com/amix/vimrc/blob/46195e4ca4d732b9e0c0cac1602f19fe1f5e9ea4/vimrcs/extended.vim#L57
+" => Command mode related
+" Smart mappings on the command line
+" cno $h e ~/
+" cno $d e ~/Desktop/
+" cno $j e ./
+" cno $c e <C-\>eCurrentFileDir("e")<cr>
+
+" " $q is super useful when browsing on the command line
+" " it deletes everything until the last slash 
+" cno $q <C-\>eDeleteTillSlash()<cr>
+
+" " Bash like keys for the command line
+" cnoremap <C-A>		<Home>
+" cnoremap <C-E>		<End>
+" cnoremap <C-K>		<C-U>
+
+" cnoremap <C-P> <Up>
+" cnoremap <C-N> <Down>
+
+" from https://github.com/amix/vimrc/blob/46195e4ca4d732b9e0c0cac1602f19fe1f5e9ea4/vimrcs/basic.vim#L256
+" Return to last edit position when opening files (You want this!)
+" au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif

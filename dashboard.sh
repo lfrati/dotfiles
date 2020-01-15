@@ -29,18 +29,24 @@ if [ $? != 0 ]; then
   # Make thin bottom pane for music
   tmux splitw -f -v -p 5
 
+  # Taskwarrior pane
+  tmux splitw -h
+
   # Assign tasks to each pane 
   tmux selectp -t 1 
   tmux send-keys "htop" C-m 
 
   tmux selectp -t 2
-  tmux send-keys "watch -n 5 nvidia-smi" C-m 
+  tmux send-keys "watch --no-title -n 5 nvidia-smi" C-m 
 
   tmux selectp -t 3
-  tmux send-keys "watch -n 5 sensors" C-m 
+  tmux send-keys "watch --no-title -n 5 sensors" C-m 
 
   tmux selectp -t 4
   tmux send-keys "ncmpcpp" C-m 
+
+  tmux selectp -t 5
+  tmux send-keys "while true; do clear && task next limit:3; sleep 3; done" C-m 
 
 fi
 

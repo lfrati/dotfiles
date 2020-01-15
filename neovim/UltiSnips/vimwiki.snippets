@@ -1,23 +1,22 @@
 snippet diary "A personal diary entry" b
-= ${1:Title} =
+# `date +"%a %d"` - ${1:Title}
 
-== Todos ==
+## DONE
 $2
 
-== Achievements ==
+## Notes
 $3
 
-== Notes ==
-$4
-
-== Resources ==
+## Resources
 $0
 endsnippet
 
 snippet note "A quick note with date and tags" b
-%title $1
-%date `date +"%Y-%m-%d %H:%M:%S"`
-TAGS: $2
+---
+tags: $1
+date: `date +"%Y-%m-%d"`
+title: $2
+---
 
 $0
 

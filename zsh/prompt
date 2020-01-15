@@ -81,14 +81,14 @@ fi
 
 export RPROMPT='$VIMODE `git_dirty`%F{241}$vcs_info_msg_0_%f `git_arrows``suspended_jobs`'
 
-# Activate vi style bindings
-# bindkey -v
+# Seems BUGGY
+# Activate vi style bindings https://dougblack.io/words/zsh-vi-mode.html
+# bindkey -v 
 # function zle-line-init zle-keymap-select {
 #     VIM_PROMPT="%{$fg_bold[yellow]%} [% NORMAL]%  %{$reset_color%}"
 #     VIMODE="${${KEYMAP/vicmd/$VIM_PROMPT}/(main|viins)/} "
 #     zle reset-prompt
 # }
-#
 # zle -N zle-line-init
 # zle -N zle-keymap-select
 # export KEYTIMEOUT=1
