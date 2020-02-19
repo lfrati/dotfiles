@@ -14,12 +14,13 @@ general {
 order += "ethernet _first_"
 order += "load"
 order += "memory"
+order += "disk /home"
 order += "tztime local"
 
 memory {
-        format = " RAM: %used / %total"
+        format = " RAM: %used / %total "
         threshold_degraded = "10%"
-        format_degraded = "MEMORY: %free"
+        format_degraded = " MEMORY: %free "
 }
 
 
@@ -34,4 +35,10 @@ load {
 
 tztime local {
         format = " %A %Y-%m-%d %H:%M:%S %Z "
+}
+
+disk "/home" {
+        format = " DISK: %percentage_avail avail (%avail/%total) "
+        low_threshold = "10"
+        format_below_threshold = "DISK: WARNING only %percentage_avail remaining!"
 }

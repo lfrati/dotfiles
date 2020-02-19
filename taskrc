@@ -25,7 +25,7 @@ bulk=2                                 # > 2 tasks considered 'a lot', for confi
 nag=You have higher priority tasks.    # Nag message to keep you honest
 
 # Dates
-dateformat=Y/m/d                       # Preferred input and display date format
+dateformat=Y-m-d                       # Preferred input and display date format
 weekstart=Monday                       # Sunday or Monday only
 displayweeknumber=yes                  # Show week numbers on calendar
 due=7                                  # Task is considered due in 7 days

@@ -1,9 +1,16 @@
-alias rm='echo "This is not the command you are looking for."; false'
+# alias rm='echo "This is not the command you are looking for."; false'
 alias vim='nvim'
 alias vi='nvim'
 alias open='xdg-open'
 alias getsong="youtube-dl -x --output '%(title)s.%(ext)s' --audio-format mp3 -f bestaudio --add-metadata --no-playlist "
 alias mkreport="~/miniconda3/envs/deep/bin/jupyter nbconvert --template=/home/lapo/dotfiles/report.tpl --to=html "
+alias tasknext="while true; do clear && task next limit:5; sleep 3; done"
+alias untar="tar -xvf"
+alias untargz="tar -zxvf"
+alias untarbz2="tar -xvjf"
+alias tarlist="tar -tvf"
+alias targzlist="tar -ztvf"
+alias tarbz2list="tar -jtvf"
 
 # Use lf to switch directories and bind it to ctrl-o
 lfcd () {
