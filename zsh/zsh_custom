@@ -12,7 +12,7 @@ alias tarlist="tar -tvf"
 alias targzlist="tar -ztvf"
 alias tarbz2list="tar -jtvf"
 
-# Use lf to switch directories and bind it to ctrl-o
+# Use lf to switch directories
 lfcd () {
     tmp="$(mktemp)"
     lf -last-dir-path="$tmp" "$@"
@@ -29,3 +29,19 @@ bindkey -s '^o' 'ranger\n'
 # Edit line in vim with ctrl-e:
 autoload edit-command-line; zle -N edit-command-line
 bindkey '^e' edit-command-line
+
+toteton(){
+
+  src_dir=$PWD
+  curr_dir=${PWD##*/}
+  dst_dir="teton:proj/"
+
+  if [[ $1 == up ]]; then
+    echo Copy $src_dir to $dst_dir
+    rsync -av --progress --delete --filter=':- .gitignore' $src_dir $dst_dir
+  else
+    echo DRYRUN: Copy $src_dir to $dst_dir
+    rsync -av --dry-run --delete --exclude ".git" --filter=':- .gitignore' $src_dir $dst_dir
+  fi
+
+}
