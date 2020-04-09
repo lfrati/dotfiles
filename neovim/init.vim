@@ -1,4 +1,4 @@
-" vim: set foldmethod=marker foldlevel=0 nomodeline:
+" vim: set foldmethod=marker foldlevel=999 nomodeline:
 "
 " ███╗   ██╗███████╗ ██████╗ ██╗   ██╗██╗███╗   ███╗
 " ████╗  ██║██╔════╝██╔═══██╗██║   ██║██║████╗ ████║
@@ -40,19 +40,98 @@ syntax on
 
 call plug#begin('~/.vim/plugged')
 
-" TODO
-" Plug 'terryma/vim-multiple-cursors'  " very cool but seems kinda buggy
-" Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
 
-" Syntax highlighting & formatting
-Plug 'sheerun/vim-polyglot'          " better syntax highlight
+Plug 'fisadev/vim-isort'
+  let g:vim_isort_python_version = 'python3'
+  let g:vim_isort_map = ''
 
-" post install (yarn install | npm install) then load plugin only for editing supported files
-Plug 'prettier/vim-prettier', {
-  \ 'do': 'yarn install',
-  \ 'for': ['javascript', 'typescript', 'css', 'less', 'scss', 'json', 'graphql', 'markdown', 'vue', 'yaml', 'html'] }
-  let g:prettier#autoformat = 0
-  autocmd InsertLeave *.js,*.jsx,*.mjs,*.ts,*.tsx,*.css,*.less,*.scss,*.json,*.graphql,*.md,*.vue,*.yaml,*.html PrettierAsync
+" Plug 'dense-analysis/ale'
+"   " let g:ale_fixers = {'python': ['isort']}
+"   " let g:ale_fix_on_save = 1
+"   let g:ale_linters = {'python':['flake8']}
+
+" Python specific bindings from https://stackoverflow.com/a/54108005
+augroup pybindings
+  autocmd! pybindings
+  autocmd Filetype python nmap <buffer> <silent> <leader>isort :Isort<CR>
+augroup end
+
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+  " TextEdit might fail if hidden is not set.
+  set hidden
+  " Some servers have issues with backup files, see #649.
+  set nobackup
+  set nowritebackup
+  " Give more space for displaying messages.
+  set cmdheight=2
+  " Having longer updatetime (default is 4000 ms = 4 s) leads to noticeable
+  " delays and poor user experience.
+  set updatetime=300
+  " Don't pass messages to |ins-completion-menu|.
+  set shortmess+=c
+  " Always show the signcolumn, otherwise it would shift the text each time
+  " diagnostics appear/become resolved.
+  set signcolumn=yes
+  " Use tab for trigger completion with characters ahead and navigate.
+  " NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
+  " other plugin before putting this into your config.
+  inoremap <silent><expr> <TAB>
+        \ pumvisible() ? "\<C-n>" :
+        \ <SID>check_back_space() ? "\<TAB>" :
+        \ coc#refresh()
+  inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+  function! s:check_back_space() abort
+    let col = col('.') - 1
+    return !col || getline('.')[col - 1]  =~# '\s'
+  endfunction
+  " GoTo code navigation.
+  nmap <silent> gd <Plug>(coc-definition)
+  nmap <silent> gtd <Plug>(coc-type-definition)
+  nmap <silent> gi <Plug>(coc-implementation)
+  nmap <silent> gr <Plug>(coc-references)
+  " Use K to show documentation in preview window.
+  nnoremap <silent> K :call <SID>show_documentation()<CR>
+  function! s:show_documentation()
+    if (index(['vim','help'], &filetype) >= 0)
+      execute 'h '.expand('<cword>')
+    else
+      call CocAction('doHover')
+    endif
+  endfunction
+  " Symbol renaming.
+  nmap <leader>rn <Plug>(coc-rename)
+  " Apply AutoFix to problem on the current line.
+  nmap <leader>qf  <Plug>(coc-fix-current)
+  " Highlight the symbol and its references when holding the cursor.
+  " Sounds good but sucks. It is not 'language aware' so it highlights like vim_current_word, but worse.
+  " autocmd CursorHold * silent call CocActionAsync('highlight')
+
+Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
+  hi CurrentWord ctermbg=236
+  hi CurrentWordTwins ctermbg=237
+
+" Very well made python aware plugin, I'm using it for semantig highlight
+Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
+  function MyCustomSemshiHighlights()
+      hi semshiGlobal          ctermfg=red
+      hi semshiLocal           ctermfg=209
+      hi semshiGlobal          ctermfg=214
+      hi semshiImported        ctermfg=180
+      hi semshiParameter       ctermfg=75
+      hi semshiParameterUnused ctermfg=117  cterm=underline
+      hi semshiFree            ctermfg=218
+      hi semshiBuiltin         ctermfg=207
+      hi semshiAttribute       ctermfg=49
+      hi semshiSelf            ctermfg=249
+      hi semshiUnresolved      ctermfg=226  cterm=underline
+      " hi semshiSelected        ctermfg=231  ctermbg=161
+      hi semshiSelected        ctermfg=161  cterm=underline
+      hi semshiErrorSign       ctermfg=231  ctermbg=160
+      hi semshiErrorChar       ctermfg=231  ctermbg=160
+      sign define semshiError text=E> texthl=semshiErrorSign
+  endfunction
+  autocmd FileType python call MyCustomSemshiHighlights()
+  autocmd ColorScheme * call MyCustomSemshiHighlights()
 
 " Editing
 Plug 'tpope/vim-surround'            " cs surrounding capabilities eg. cs)], csw'
@@ -125,12 +204,8 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
 
 Plug 'itchyny/calendar.vim'
 
-" Appearance
 Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
-Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
-  " Added some colors at the end of file
-  " hi CurrentWord ctermbg=236
-  " hi CurrentWordTwins ctermbg=237
+
 
 Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
 Plug 'ap/vim-buftabline'            " Show open buffers
@@ -150,21 +225,28 @@ Plug 'ap/vim-buftabline'            " Show open buffers
   nnoremap <Leader>- :bd<Cr>
 
 Plug 'itchyny/lightline.vim'        " lightweight status line
-  " set noshowmode " Not needed since the mode is shown in lighline
-  let g:lightline = {
+    let g:lightline = {
         \ 'colorscheme': 'onedark',
         \ 'active': {
-        \   'left': [ [ 'mode', 'paste' ],
-        \             [ 'gitbranch', 'readonly', 'filename', 'modified' ] ],
-        \   'right': [ [ 'lineinfo' ],
-        \              [ 'percent' ],
-        \              [ 'fileformat', 'fileencoding', 'filetype' ] ]
+        \   'left': [ [ 'mode', 'paste','readonly','modified','gitbranch'],
+        \             [ 'cocstatus']],
+        \   'right': [ [ 'lineinfo','percent'],
+        \              [ 'fileformat','fileencoding','filetype'],
+        \              [  'filename'] ]
         \ },
         \ 'component_function': {
-        \   'gitbranch': 'fugitive#head',
+        \   'gitbranch': 'GitBranchName',
         \   'filename': 'LightlineFilename',
+        \   'cocstatus': 'coc#status'
         \ },
         \ }
+  function! GitBranchName()
+    let l:head = FugitiveHead()
+    if l:head == ''
+      return ' - '
+    else
+      return ' ' . l:head
+  endfunction
   " Show file path relative to git root or absolutepath
   " https://github.com/itchyny/lightline.vim/issues/293h
   function! LightlineFilename()
@@ -189,15 +271,37 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
 
 " Zen mode
 Plug 'junegunn/goyo.vim'
-  autocmd! User GoyoEnter Limelight
-  autocmd! User GoyoLeave Limelight!
+  function! s:goyo_enter()
+    " keep the text in the middle of the page while in goyo
+    set showtabline=0
+    set scrolloff=999
+    set noshowmode
+    set noshowcmd
+    Limelight
+  endfunction
 
+  function! s:goyo_leave()
+    set scrolloff=4
+    set showtabline=2
+    set showmode
+    set showcmd
+    :call buftabline#update(0)
+    Limelight!
+  endfunction
+
+  autocmd! User GoyoEnter nested call <SID>goyo_enter()
+  autocmd! User GoyoLeave nested call <SID>goyo_leave()
+  " autocmd! User GoyoEnter Limelight
+  " autocmd! User GoyoLeave Limelight!
+  nnoremap <leader>go :Goyo<CR>
+
+" highlight the area where writing and fade out the rest
 Plug 'junegunn/limelight.vim'
   let g:limelight_conceal_ctermfg = 237
 
-" Navigation
-" Plug 'kien/ctrlp.vim'
+" fuzzy finding for the win
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+
 Plug 'junegunn/fzf.vim'
   let g:fzf_colors =
   \ { 'fg':      ['fg', 'Normal'],
@@ -249,6 +353,7 @@ Plug 'junegunn/fzf.vim'
   endif
 
 Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
+
 Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
   set nohlsearch " easymotion will do the highlighting
   " Use easymotion to search
@@ -264,6 +369,11 @@ Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
 
 Plug 'scrooloose/nerdtree'       " better netrw vim navigation
   silent! nmap <F7> :NERDTreeToggle<CR>
+
+" Nicer syntax highlight in NERDTree
+Plug 'tiagofumo/vim-nerdtree-syntax-highlight'
+
+Plug 'Xuyuanp/nerdtree-git-plugin'
 
 Plug 'mbbill/undotree'           " More easily navigate vim's poweful undo tree
   if has("persistent_undo")
@@ -290,6 +400,7 @@ Plug 'kassio/neoterm'            " easier terminal management in vim
   let g:neoterm_default_mod=':vertical'
   let g:neoterm_size=80
   let g:neoterm_autoscroll=1
+  " My own functions to try to run python code in an ipython terminal
   function! IPythonLoadCurrentFile()
     " Get absolute path of current file
     let path = expand('%:p')
@@ -327,8 +438,6 @@ Plug 'SirVer/ultisnips'          " custom snippets
   let g:UltiSnipsJumpBackwardTrigger="<Up>"
   let g:UltiSnipsSnippetDirectories=[$HOME.'/dotfiles/neovim/UltiSnips']
 
-" Experimental
-Plug 'ajh17/VimCompletesMe'
 
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
@@ -364,7 +473,7 @@ call plug#end()
 
 set background=dark " Because dark is cool
 set encoding=utf8
-colorscheme onedark 
+colorscheme onedark
 
 " }}}
 " ============================================================================
@@ -402,6 +511,7 @@ set autoread                           " Reload files changed outside vim
 set lazyredraw                         " Don't redraw while executing macros (good performance setting)
 set linebreak                          " Stop annoying 80 chars line wrapping
 set textwidth=500                      "
+set scrolloff=4
 
 " Search down into subfolders
 " Provides tab-completion for all file-related tasks
@@ -474,6 +584,11 @@ let g:python_host_prog="/home/lapo/miniconda3/envs/neovim2/bin/python"
 " easily open and source neovim config file
 nmap <leader>conf :e $MYVIMRC<CR>
 
+" execute current line in shell and paste results under it
+" nmap <leader>e :exec 'r!'.getline('..')<CR>
+" execute current line in shell and paste results above it
+nmap <leader>e !!bash<CR>
+
 " Delete trailing white space on save, useful for some filetypes ;)
 fun! CleanExtraSpaces()
     let save_cursor = getpos(".")
@@ -510,7 +625,7 @@ nnoremap k gk
 " nnoremap W :w<CR>
 " nnoremap Q :q<CR>
 " except... it prevents me to move by full words, let's try the Ctrl combo instead
-nnoremap <C-w> :w<CR> 
+nnoremap <C-w> :w<CR>
 nnoremap <C-Q> :q<CR>
 
 " center current line after jumping to prev/next locations
@@ -547,6 +662,10 @@ hi Normal guibg=NONE ctermbg=NONE
 " Experimental {{{
 " ============================================================================
 
+" Nice and minimal but for some reason never completes what I want it to...
+" Plug 'ajh17/VimCompletesMe'
+" Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
+
 " from https://github.com/amix/vimrc/blob/46195e4ca4d732b9e0c0cac1602f19fe1f5e9ea4/vimrcs/extended.vim#L57
 " => Command mode related
 " Smart mappings on the command line
@@ -556,7 +675,7 @@ hi Normal guibg=NONE ctermbg=NONE
 " cno $c e <C-\>eCurrentFileDir("e")<cr>
 
 " " $q is super useful when browsing on the command line
-" " it deletes everything until the last slash 
+" " it deletes everything until the last slash
 " cno $q <C-\>eDeleteTillSlash()<cr>
 
 " " Bash like keys for the command line
@@ -570,6 +689,6 @@ hi Normal guibg=NONE ctermbg=NONE
 " from https://github.com/amix/vimrc/blob/46195e4ca4d732b9e0c0cac1602f19fe1f5e9ea4/vimrcs/basic.vim#L256
 " Return to last edit position when opening files (You want this!)
 " au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
-" 
+"
 " }}}
 " ============================================================================
