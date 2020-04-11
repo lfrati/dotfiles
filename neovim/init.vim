@@ -40,6 +40,17 @@ syntax on
 
 call plug#begin('~/.vim/plugged')
 
+Plug 'terryma/vim-multiple-cursors'
+  let g:multiple_cursors_support_imap = 0
+  let g:multi_cursor_exit_from_visual_mode = 1
+  let g:multi_cursor_exit_from_insert_mode = 1
+
+Plug 'airblade/vim-gitgutter'
+  let g:gitgutter_map_keys = 0 
+  function! GitChunks()
+    let [a,m,r] = GitGutterGetHunkSummary()
+    return printf('+%d ~%d -%d', a, m, r)
+  endfunction
 
 Plug 'fisadev/vim-isort'
   let g:vim_isort_python_version = 'python3'
@@ -72,6 +83,18 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
   " Always show the signcolumn, otherwise it would shift the text each time
   " diagnostics appear/become resolved.
   set signcolumn=yes
+  function! s:check_back_space() abort
+    let col = col('.') - 1
+    return !col || getline('.')[col - 1]  =~# '\s'
+  endfunction
+  " Use K to show documentation in preview window.
+  function! s:show_documentation()
+    if (index(['vim','help'], &filetype) >= 0)
+      execute 'h '.expand('<cword>')
+    else
+      call CocAction('doHover')
+    endif
+  endfunction
   " Use tab for trigger completion with characters ahead and navigate.
   " NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
   " other plugin before putting this into your config.
@@ -80,31 +103,16 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
         \ <SID>check_back_space() ? "\<TAB>" :
         \ coc#refresh()
   inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
-  function! s:check_back_space() abort
-    let col = col('.') - 1
-    return !col || getline('.')[col - 1]  =~# '\s'
-  endfunction
   " GoTo code navigation.
   nmap <silent> gd <Plug>(coc-definition)
   nmap <silent> gtd <Plug>(coc-type-definition)
   nmap <silent> gi <Plug>(coc-implementation)
   nmap <silent> gr <Plug>(coc-references)
-  " Use K to show documentation in preview window.
   nnoremap <silent> K :call <SID>show_documentation()<CR>
-  function! s:show_documentation()
-    if (index(['vim','help'], &filetype) >= 0)
-      execute 'h '.expand('<cword>')
-    else
-      call CocAction('doHover')
-    endif
-  endfunction
   " Symbol renaming.
   nmap <leader>rn <Plug>(coc-rename)
   " Apply AutoFix to problem on the current line.
   nmap <leader>qf  <Plug>(coc-fix-current)
-  " Highlight the symbol and its references when holding the cursor.
-  " Sounds good but sucks. It is not 'language aware' so it highlights like vim_current_word, but worse.
-  " autocmd CursorHold * silent call CocActionAsync('highlight')
 
 Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
   hi CurrentWord ctermbg=236
@@ -165,8 +173,8 @@ Plug 'ludovicchabant/vim-gutentags'
   let g:gutentags_cache_dir = '~/.tags_dir'
 
 Plug 'majutsushi/tagbar'
-  nmap <F6> :TagbarToggle<CR>
   let g:tagbar_autofocus = 1
+  nmap <F6> :TagbarToggle<CR>
 
 " Organization
 Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
@@ -183,7 +191,6 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     execute "e " . l:path
     execute "normal! inote\<C-R>=UltiSnips#ExpandSnippet()\<CR>"
   endfunction
-  nmap <leader>no :call <SID>QuickNote()<CR>
   let g:vimwiki_folding='expr'
   let g:vimwiki_table_mappings=0 " Prevent conflict with UltiSnips tab completion
   let g:vimwiki_list = [{'path': '~/Dropbox/vimwiki/',
@@ -201,11 +208,11 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
             \ , 'ctagsbin':'/home/lapo/dotfiles/neovim/vwtags.py'
             \ , 'ctagsargs': 'markdown'
             \ }
+  nmap <leader>no :call <SID>QuickNote()<CR>
 
 Plug 'itchyny/calendar.vim'
 
 Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
-
 
 Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
 Plug 'ap/vim-buftabline'            " Show open buffers
@@ -228,24 +235,52 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     let g:lightline = {
         \ 'colorscheme': 'onedark',
         \ 'active': {
-        \   'left': [ [ 'mode', 'paste','readonly','modified','gitbranch'],
-        \             [ 'cocstatus']],
-        \   'right': [ [ 'lineinfo','percent'],
-        \              [ 'fileformat','fileencoding','filetype'],
-        \              [  'filename'] ]
+        \   'left': [ 
+        \             [ 'mode', 'paste','readonly','gitbranch','gitchunks','sync','modified'],
+        \             [ 'cocstatus' ] 
+        \           ],
+        \   'right': [ 
+        \              [ 'lineinfo' ],
+        \              [ 'fileformat','fileencoding','filetype' ],
+        \              [  'filename' ] 
+        \            ]
         \ },
         \ 'component_function': {
-        \   'gitbranch': 'GitBranchName',
+        \   'gitbranch': 'GitStatus',
         \   'filename': 'LightlineFilename',
+        \   'sync': 'SyncFlag',
         \   'cocstatus': 'coc#status'
         \ },
+        \ 'component_type':{
+        \   'modified' : 'error'
+        \ },
+        \ 'component_expand':{
+        \   'modified' : 'ModifiedFlag'
         \ }
-  function! GitBranchName()
+        \ }
+  " Component expand is called only once every time the statusline is updated
+  " To make our red modfied symbol work we update the statusline every time
+  " there is a change. More info about the events in :help TextChanged
+  augroup change_triggers
+    autocmd!
+    autocmd TextChanged,TextChangedI * call lightline#update()
+  augroup END
+  function! ModifiedFlag()
+    " custom function that checks if the buffer has been modified
+    return &modifiable && &modified ? '+' : ''
+	endfunction
+  function! SyncFlag()
+    "check if the window has the scrollbind flag set
+    return &scb == 0 ? '' : 'Syncd'  
+  endfunction
+  " scb has to be called on all the windows that we want to scrollbind
+  function! GitStatus()
+    " check the branch name and display it with a fancy symbol
     let l:head = FugitiveHead()
     if l:head == ''
       return ' - '
     else
-      return ' ' . l:head
+      return ' ' . l:head . ' ' . GitChunks()
   endfunction
   " Show file path relative to git root or absolutepath
   " https://github.com/itchyny/lightline.vim/issues/293h
@@ -257,7 +292,6 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     endif
     return expand('%')
   endfunction
-  autocmd! VimEnter * call SetupLightlineColors()
   function SetupLightlineColors() abort
     " transparent background in statusbar
     let l:palette = lightline#palette()
@@ -268,27 +302,25 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     " let l:palette.tabline.middle = l:palette.normal.middle
     call lightline#colorscheme()
   endfunction
+  autocmd! VimEnter * call SetupLightlineColors()
+  nmap <leader>sy :windo set scb!<CR>
 
 " Zen mode
 Plug 'junegunn/goyo.vim'
   function! s:goyo_enter()
     " keep the text in the middle of the page while in goyo
     set showtabline=0
-    set scrolloff=999
     set noshowmode
     set noshowcmd
     Limelight
   endfunction
-
   function! s:goyo_leave()
-    set scrolloff=4
     set showtabline=2
     set showmode
     set showcmd
     :call buftabline#update(0)
     Limelight!
   endfunction
-
   autocmd! User GoyoEnter nested call <SID>goyo_enter()
   autocmd! User GoyoLeave nested call <SID>goyo_leave()
   " autocmd! User GoyoEnter Limelight
@@ -320,7 +352,6 @@ Plug 'junegunn/fzf.vim'
   " Use FZF to search in current file dir with preview
   command! -bang -nargs=? -complete=dir Files
       \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
-  nnoremap <c-s> :Files<CR>
   " Offload interactive search to Rg, use FzF only as a wrapper around it, also add preview
   " USES FUGITIVE FOR HANDLING GIT
   function! GitAwarePath()
@@ -342,7 +373,6 @@ Plug 'junegunn/fzf.vim'
     call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
   endfunction
   command! -nargs=* -bang Rg call RipgrepFzf(<q-args>, <bang>0) " Use RipGrep to search inside files
-  nnoremap <c-g> :Rg<CR>
   " When fzf starts in a terminal buffer, the file type of the buffer is set to fzf. So you can set up FileType fzf autocmd to
   " customize the settings of the window.For example, if you use the default layout ({'down': '~40%'}) on Neovim, you might
   " want to temporarily disable the statusline for a cleaner look.
@@ -351,6 +381,9 @@ Plug 'junegunn/fzf.vim'
     autocmd  FileType fzf set laststatus=0 noshowmode noruler
       \| autocmd BufLeave <buffer> set laststatus=2 showmode ruler
   endif
+  nnoremap <leader>f :Files<CR>
+  nnoremap <leader>rg :Rg<CR>
+  nnoremap <leader>rw :Rg <C-R><C-W><CR>
 
 Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
 
@@ -438,10 +471,8 @@ Plug 'SirVer/ultisnips'          " custom snippets
   let g:UltiSnipsJumpBackwardTrigger="<Up>"
   let g:UltiSnipsSnippetDirectories=[$HOME.'/dotfiles/neovim/UltiSnips']
 
-
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
-
 
 " }}}
 " ============================================================================
@@ -587,7 +618,7 @@ nmap <leader>conf :e $MYVIMRC<CR>
 " execute current line in shell and paste results under it
 " nmap <leader>e :exec 'r!'.getline('..')<CR>
 " execute current line in shell and paste results above it
-nmap <leader>e !!bash<CR>
+nmap <leader>ex !!bash<CR>
 
 " Delete trailing white space on save, useful for some filetypes ;)
 fun! CleanExtraSpaces()
@@ -656,7 +687,6 @@ hi VimwikiLink ctermfg=39 cterm=underline
 " because of vim's uneven borders)
 hi Normal guibg=NONE ctermbg=NONE
 
-
 " }}}
 " ============================================================================
 " Experimental {{{
@@ -689,6 +719,6 @@ hi Normal guibg=NONE ctermbg=NONE
 " from https://github.com/amix/vimrc/blob/46195e4ca4d732b9e0c0cac1602f19fe1f5e9ea4/vimrcs/basic.vim#L256
 " Return to last edit position when opening files (You want this!)
 " au BufReadPost * if line("'\"") > 1 && line("'\"") <= line("$") | exe "normal! g'\"" | endif
-"
+
 " }}}
 " ============================================================================
