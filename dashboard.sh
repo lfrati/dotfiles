@@ -24,11 +24,11 @@ if [ $? != 0 ]; then
 
   # Pane 2
   # Split pane 1 horizontally to make room for GPU/CPU info
-  tmux splitw -h -p 10
+  tmux splitw -h -p 32
 
   # Pane 3
   # Taskwarrior pane
-  tmux splitw -v -p 50
+  tmux splitw -v -p 55
 
   # Pane 4
   # Split for small CPU info
@@ -52,7 +52,7 @@ if [ $? != 0 ]; then
   tmux send-keys "while true; do clear && task next limit:3; sleep 3; done" C-m
 
   tmux selectp -t 4
-  tmux send-keys "watch --no-title -n 5 sensors -A k10temp-pci-00c3" C-m
+  tmux send-keys "watch --no-title -n 5 \"sensors -A k10temp-pci-00c3 | grep Tdie | sed -E 's/Tdie: +/CPU temp: /'\"" C-m
 
   tmux selectp -t 5
   tmux send-keys "ncmpcpp" C-m

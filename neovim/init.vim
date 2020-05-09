@@ -40,6 +40,13 @@ syntax on
 
 call plug#begin('~/.vim/plugged')
 
+Plug 'godlygeek/tabular'
+
+Plug 'plasticboy/vim-markdown'
+
+Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
+  nmap <leader>md <Plug>MarkdownPreviewToggle
+
 Plug 'terryma/vim-multiple-cursors'
   let g:multiple_cursors_support_imap = 0
   let g:multi_cursor_exit_from_visual_mode = 1
@@ -52,22 +59,13 @@ Plug 'airblade/vim-gitgutter'
     return printf('+%d ~%d -%d', a, m, r)
   endfunction
 
-Plug 'fisadev/vim-isort'
-  let g:vim_isort_python_version = 'python3'
-  let g:vim_isort_map = ''
-
-" Plug 'dense-analysis/ale'
-"   " let g:ale_fixers = {'python': ['isort']}
-"   " let g:ale_fix_on_save = 1
-"   let g:ale_linters = {'python':['flake8']}
-
 " Python specific bindings from https://stackoverflow.com/a/54108005
 augroup pybindings
   autocmd! pybindings
   autocmd Filetype python nmap <buffer> <silent> <leader>isort :Isort<CR>
 augroup end
 
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
   " TextEdit might fail if hidden is not set.
   set hidden
   " Some servers have issues with backup files, see #649.
@@ -105,14 +103,12 @@ Plug 'neoclide/coc.nvim', {'branch': 'release'}
   inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
   " GoTo code navigation.
   nmap <silent> gd <Plug>(coc-definition)
-  nmap <silent> gtd <Plug>(coc-type-definition)
-  nmap <silent> gi <Plug>(coc-implementation)
   nmap <silent> gr <Plug>(coc-references)
   nnoremap <silent> K :call <SID>show_documentation()<CR>
   " Symbol renaming.
   nmap <leader>rn <Plug>(coc-rename)
-  " Apply AutoFix to problem on the current line.
-  nmap <leader>qf  <Plug>(coc-fix-current)
+  nnoremap <silent> <Leader>coc  :<C-u>CocList<CR>
+
 
 Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
   hi CurrentWord ctermbg=236
@@ -141,9 +137,10 @@ Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
   autocmd FileType python call MyCustomSemshiHighlights()
   autocmd ColorScheme * call MyCustomSemshiHighlights()
 
-" Editing
 Plug 'tpope/vim-surround'            " cs surrounding capabilities eg. cs)], csw'
+
 Plug 'christoomey/vim-system-copy'   " cp/cv for copy paste e.g. cvi = paste inside '
+
 Plug 'junegunn/vim-easy-align'       " sounds super cool, never used so far
   " Start interactive EasyAlign in visual mode (e.g. vipga)
   xmap ga <Plug>(EasyAlign)
@@ -159,6 +156,7 @@ Plug 'sbdchd/vim-shebang'            " automatically add #! stuff to files
               \}
 
 Plug 'tpope/vim-commentary'          " gc code away
+
 Plug 'tmhedberg/SimpylFold'          " Better Python folding
   let g:SimpylFold_docstring_preview=1
   set foldmethod=indent
@@ -168,6 +166,7 @@ Plug 'Konfekt/FastFold'              " Suggested by SimplyFold to improve speed
 
 " Tags management
 Plug 'universal-ctags/ctags'
+
 Plug 'ludovicchabant/vim-gutentags'
   " Do not pollute projects with tag files, keep them all in one place.
   let g:gutentags_cache_dir = '~/.tags_dir'
@@ -187,10 +186,11 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   function! s:QuickNote ()
     py import uuid
     let l:id = pyeval('str(uuid.uuid4())[24:]')
-    let l:path = $VIMWIKI_DIR . "/note.". l:id . ".md"
+    let l:path = $VIMWIKI_DIR . "/note-". l:id . ".md"
     execute "e " . l:path
     execute "normal! inote\<C-R>=UltiSnips#ExpandSnippet()\<CR>"
   endfunction
+  let g:vimwiki_global_ext=0 " Prevent creation of temporary wikis so that markdown file are not flagged vimwiki
   let g:vimwiki_folding='expr'
   let g:vimwiki_table_mappings=0 " Prevent conflict with UltiSnips tab completion
   let g:vimwiki_list = [{'path': '~/Dropbox/vimwiki/',
@@ -215,6 +215,7 @@ Plug 'itchyny/calendar.vim'
 Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
 
 Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
+
 Plug 'ap/vim-buftabline'            " Show open buffers
   let g:buftabline_numbers=2      " Show ordinal tab numbers (not the vim buffer ones)
   " Doesn't display correct with CascadiaCode Nerd Font
@@ -232,43 +233,83 @@ Plug 'ap/vim-buftabline'            " Show open buffers
   nnoremap <Leader>- :bd<Cr>
 
 Plug 'itchyny/lightline.vim'        " lightweight status line
-    let g:lightline = {
-        \ 'colorscheme': 'onedark',
-        \ 'active': {
-        \   'left': [ 
-        \             [ 'mode', 'paste','readonly','gitbranch','gitchunks','sync','modified'],
-        \             [ 'cocstatus' ] 
-        \           ],
-        \   'right': [ 
-        \              [ 'lineinfo' ],
-        \              [ 'fileformat','fileencoding','filetype' ],
-        \              [  'filename' ] 
-        \            ]
-        \ },
-        \ 'component_function': {
-        \   'gitbranch': 'GitStatus',
-        \   'filename': 'LightlineFilename',
-        \   'sync': 'SyncFlag',
-        \   'cocstatus': 'coc#status'
-        \ },
-        \ 'component_type':{
-        \   'modified' : 'error'
-        \ },
-        \ 'component_expand':{
-        \   'modified' : 'ModifiedFlag'
-        \ }
-        \ }
+  let g:lightline = {
+      \ 'colorscheme': 'onedark',
+      \ 'active': {
+      \   'left': [ 
+      \             [ 'mode', 'paste','readonly','coc_warning','coc_error'],
+      \             [ 'cocstatus' ] 
+      \           ],
+      \   'right': [ 
+      \              [ 'gitbranch','lineinfo' ],
+      \              [ 'modified','fileencoding','filetype','sync'],
+      \              [ 'filename' ] 
+      \            ]
+      \ },
+      \ 'inactive': {
+      \ 'left': [ [ 'filename' ] ],
+      \ 'right': [ [ 'lineinfo' ],
+      \            [ 'modified','sync' ] ] 
+      \ },
+      \ 'component_function': {
+      \   'gitbranch': 'GitStatus',
+      \   'filename': 'LightlineFilename',
+      \   'sync': 'SyncFlag',
+      \   'cocstatus': 'CocStatusMsg'
+      \ },
+      \ 'component_expand':{
+      \   'modified' : 'ModifiedFlag',
+      \   'coc_error' : 'LightlineCocErrors',
+      \   'coc_warning' : 'LightlineCocWarnings'
+      \ },
+      \ 'component_type':{
+      \   'modified' : 'error',
+      \   'coc_error' : 'error',
+      \   'coc_warning' : 'warning'
+      \ }
+      \ }
   " Component expand is called only once every time the statusline is updated
   " To make our red modfied symbol work we update the statusline every time
   " there is a change. More info about the events in :help TextChanged
   augroup change_triggers
     autocmd!
-    autocmd TextChanged,TextChangedI * call lightline#update()
+    autocmd TextChanged,TextChangedI,BufWritePost,BufEnter * call lightline#update()
+    autocmd User CocStatusChange call lightline#update()
+    autocmd User CocDiagnosticChange call lightline#update()
   augroup END
   function! ModifiedFlag()
     " custom function that checks if the buffer has been modified
-    return &modifiable && &modified ? '+' : ''
+    return &modifiable && &modified ? '[+]' : ''
 	endfunction
+  " From https://github.com/neoclide/coc.nvim/issues/401
+  " Show CocDiagnistics in lightline
+	function! CocStatusMsg() abort
+	  return get(g:, 'coc_status', '')
+	endfunction
+  let g:coc_user_config = { 
+    \ 'diagnostic': {
+    \   'errorSign': 'E',
+    \   'warnignSign': 'W'
+    \   }
+    \ }
+  function! s:lightline_coc_diagnostic(kind, sign) abort
+    let info = get(b:, 'coc_diagnostic_info', 0)
+    if empty(info) || get(info, a:kind, 0) == 0
+      return ''
+    endif
+    try
+      let s = g:coc_user_config['diagnostic'][a:sign . 'Sign']
+    catch
+      let s = ''
+    endtry
+    return printf('%s %d', s, info[a:kind])
+  endfunction
+    function! LightlineCocErrors() abort
+    return s:lightline_coc_diagnostic('error', 'error')
+  endfunction
+  function! LightlineCocWarnings() abort
+    return s:lightline_coc_diagnostic('warning', 'warning')
+  endfunction
   function! SyncFlag()
     "check if the window has the scrollbind flag set
     return &scb == 0 ? '' : 'Syncd'  
@@ -280,7 +321,8 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     if l:head == ''
       return ' - '
     else
-      return ' ' . l:head . ' ' . GitChunks()
+      " return ' ' . l:head . ' ' . GitChunks()
+      return ' ' . l:head
   endfunction
   " Show file path relative to git root or absolutepath
   " https://github.com/itchyny/lightline.vim/issues/293h
@@ -303,7 +345,7 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     call lightline#colorscheme()
   endfunction
   autocmd! VimEnter * call SetupLightlineColors()
-  nmap <leader>sy :windo set scb!<CR>
+  nmap <leader>bind :windo set scb!<CR>
 
 " Zen mode
 Plug 'junegunn/goyo.vim'
@@ -382,6 +424,7 @@ Plug 'junegunn/fzf.vim'
       \| autocmd BufLeave <buffer> set laststatus=2 showmode ruler
   endif
   nnoremap <leader>f :Files<CR>
+  " rg -> ripgrep , rw -> ripgrep current word
   nnoremap <leader>rg :Rg<CR>
   nnoremap <leader>rw :Rg <C-R><C-W><CR>
 
@@ -656,8 +699,15 @@ nnoremap k gk
 " nnoremap W :w<CR>
 " nnoremap Q :q<CR>
 " except... it prevents me to move by full words, let's try the Ctrl combo instead
-nnoremap <C-w> :w<CR>
-nnoremap <C-Q> :q<CR>
+" nnoremap <C-w> :w<CR>
+" Sounded good except that now I have this musclememory <C-w> = Save
+" Guess what? I keep closing tabs in firefox >_>
+" Let's try using leader instead, obviously <Leader>w is already used by Vimwiki...
+" Maybe... s as in Save?
+nnoremap <Leader>s :w<CR>
+nnoremap <Leader>q :q<CR>
+" nnoremap <C-W> :w<CR>
+" nnoremap <C-Q> :q<CR>
 
 " center current line after jumping to prev/next locations
 nnoremap <C-o> <C-o>zz

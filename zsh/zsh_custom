@@ -41,7 +41,21 @@ toteton(){
     rsync -av --progress --delete --filter=':- .gitignore' $src_dir $dst_dir
   else
     echo DRYRUN: Copy $src_dir to $dst_dir
-    rsync -av --dry-run --delete --exclude ".git" --filter=':- .gitignore' $src_dir $dst_dir
+    rsync -av --dry-run --delete --filter=':- .gitignore' $src_dir $dst_dir
   fi
 
 }
+
+# fromteton(){
+
+#   dst_dir="teton:proj/"
+
+#   if [[ $1 == down ]]; then
+#     echo Copy $src_dir to $dst_dir
+#     rsync -av --progress --delete --exclude '*.hebb' --exclude '*.model' $src_dir $dst_dir
+#   else
+#     echo DRYRUN: Copy $src_dir to $dst_dir
+#     rsync -av --dry-run --delete --exclude '*.hebb' --exclude '*.model' $src_dir $dst_dir
+#   fi
+
+# }

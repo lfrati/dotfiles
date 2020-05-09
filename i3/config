@@ -119,10 +119,9 @@ bindsym $mod+Shift+h move left
 # bindsym $mod+Shift+Right move right
 
 # split in horizontal orientation
-bindsym $mod+p split h
-
+bindsym $mod+o split h
 # split in vertical orientation
-bindsym $mod+o split v
+bindsym $mod+p split v
 
 # enter fullscreen mode for the focused container
 bindsym $mod+f fullscreen toggle
@@ -139,7 +138,7 @@ bindsym $mod+e layout toggle split
 # bindsym $mod+space focus mode_toggle
 
 # focus the parent container
-bindsym $mod+a focus parent
+# bindsym $mod+a focus parent
 
 # focus the child container
 #bindsym $mod+d focus child
@@ -221,7 +220,7 @@ bar {
         status_command i3status
 }
 
-focus_follows_mouse no
+# focus_follows_mouse no
 
 ##############################################################
 # MY BINDINGS ################################################
@@ -241,9 +240,13 @@ bindsym F11 exec mpc play
 bindsym F12 exec mpc next
 
 # Use print button (finally found a use for it) to save a screenshot of the current focused screen
-bindsym Print       exec flameshot screen -p /home/lapo/Pictures/screenshots
-bindsym Shift+Print exec flameshot gui
+# bindsym Print       exec flameshot screen -p /home/lapo/Pictures/screenshots
+bindsym Print exec flameshot gui
 
+# Shortcut to easily open folders
+bindsym $mod+t exec thunar 
+
+bindsym $mod+Tab workspace back_and_forth
 ##############################################################
 # MY STARTUP  ################################################
 ##############################################################
@@ -261,6 +264,5 @@ exec --no-startup-id dropbox start
 exec --no-startup-id mpd # music demon to control with mpc and connect to with ncmpcpp
 exec --no-startup-id dunst # notification daemon, supports html, notify-send...
 exec --no-startup-id tilda # diary/notes + scratch terminal
-exec --no-startup-id tilda # tasks tracking
 exec --no-startup-id urxvt -hold -e sh /home/lapo/dotfiles/dashboard.sh
-exec_always --no-startup-id unclutter # hide mouse when idle 
+exec --no-startup-id unclutter # hide mouse when idle 
