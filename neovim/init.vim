@@ -14,7 +14,6 @@
 " ╚██████╗╚██████╔╝██║ ╚████║██║     ██║╚██████╔╝
 "  ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝     ╚═╝ ╚═════╝
 "
-"
 
 " ============================================================================
 " Leader {{{
@@ -40,9 +39,36 @@ syntax on
 
 call plug#begin('~/.vim/plugged')
 
+" Suggested by vim-markdown
 Plug 'godlygeek/tabular'
 
 Plug 'plasticboy/vim-markdown'
+  let g:vim_markdown_folding_disabled = 1
+  " I'm not crazy, I swear for some reason folding didn't work properly
+  function! MarkdownLevel()
+      if getline(v:lnum) =~ '^# .*$'
+          return ">1"
+      endif
+      if getline(v:lnum) =~ '^## .*$'
+          return ">2"
+      endif
+      if getline(v:lnum) =~ '^### .*$'
+          return ">3"
+      endif
+      if getline(v:lnum) =~ '^#### .*$'
+          return ">4"
+      endif
+      if getline(v:lnum) =~ '^##### .*$'
+          return ">5"
+      endif
+      if getline(v:lnum) =~ '^###### .*$'
+          return ">6"
+      endif
+      return "=" 
+  endfunction
+  au BufEnter *.md setlocal foldexpr=MarkdownLevel()  
+  au BufEnter *.md setlocal foldmethod=expr
+  au BufEnter *.md setlocal foldlevel=1
 
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
   nmap <leader>md <Plug>MarkdownPreviewToggle
@@ -60,10 +86,10 @@ Plug 'airblade/vim-gitgutter'
   endfunction
 
 " Python specific bindings from https://stackoverflow.com/a/54108005
-augroup pybindings
-  autocmd! pybindings
-  autocmd Filetype python nmap <buffer> <silent> <leader>isort :Isort<CR>
-augroup end
+" augroup pybindings
+"   autocmd! pybindings
+"   autocmd Filetype python nmap <buffer> <silent> <leader>isort :Isort<CR>
+" augroup end
 
 Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
   " TextEdit might fail if hidden is not set.
@@ -96,80 +122,85 @@ Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
   " Use tab for trigger completion with characters ahead and navigate.
   " NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
   " other plugin before putting this into your config.
-  inoremap <silent><expr> <TAB>
-        \ pumvisible() ? "\<C-n>" :
-        \ <SID>check_back_space() ? "\<TAB>" :
-        \ coc#refresh()
-  inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
-  " GoTo code navigation.
-  nmap <silent> gd <Plug>(coc-definition)
-  nmap <silent> gr <Plug>(coc-references)
-  nnoremap <silent> K :call <SID>show_documentation()<CR>
-  " Symbol renaming.
-  nmap <leader>rn <Plug>(coc-rename)
-  nnoremap <silent> <Leader>coc  :<C-u>CocList<CR>
-
+  fun! GoCoc()
+    inoremap <buffer> <silent><expr> <TAB>
+          \ pumvisible() ? "\<C-n>" :
+          \ <SID>check_back_space() ? "\<TAB>" :
+          \ coc#refresh()
+    inoremap <buffer> <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+    nmap <buffer> <silent> gd <Plug>(coc-definition)
+    nmap <buffer> <silent> gr <Plug>(coc-references)
+    nmap <buffer> <silent> <leader>rn <Plug>(coc-rename)
+    nmap <buffer> <silent> <leader>isort :Isort<CR>
+    nnoremap <buffer> <silent> K :call <SID>show_documentation()<CR>
+    nnoremap <buffer> <silent> <leader>coc  :<C-u>CocList<CR>
+  endfun
+  augroup cocbindings
+    autocmd! cocbindings
+    autocmd Filetype python,javascript :call GoCoc()
+  augroup end
 
 Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
   hi CurrentWord ctermbg=236
   hi CurrentWordTwins ctermbg=237
 
-" Very well made python aware plugin, I'm using it for semantig highlight
-Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
-  function MyCustomSemshiHighlights()
-      hi semshiGlobal          ctermfg=red
-      hi semshiLocal           ctermfg=209
-      hi semshiGlobal          ctermfg=214
-      hi semshiImported        ctermfg=180
-      hi semshiParameter       ctermfg=75
-      hi semshiParameterUnused ctermfg=117  cterm=underline
-      hi semshiFree            ctermfg=218
-      hi semshiBuiltin         ctermfg=207
-      hi semshiAttribute       ctermfg=49
-      hi semshiSelf            ctermfg=249
-      hi semshiUnresolved      ctermfg=226  cterm=underline
-      " hi semshiSelected        ctermfg=231  ctermbg=161
-      hi semshiSelected        ctermfg=161  cterm=underline
-      hi semshiErrorSign       ctermfg=231  ctermbg=160
-      hi semshiErrorChar       ctermfg=231  ctermbg=160
-      sign define semshiError text=E> texthl=semshiErrorSign
-  endfunction
-  autocmd FileType python call MyCustomSemshiHighlights()
-  autocmd ColorScheme * call MyCustomSemshiHighlights()
+" " Very well made python aware plugin, I'm using it for semantig highlight
+" Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
+"   function MyCustomSemshiHighlights()
+"       hi semshiGlobal          ctermfg=red
+"       hi semshiLocal           ctermfg=209
+"       hi semshiGlobal          ctermfg=214
+"       hi semshiImported        ctermfg=180
+"       hi semshiParameter       ctermfg=75
+"       hi semshiParameterUnused ctermfg=117  cterm=underline
+"       hi semshiFree            ctermfg=218
+"       hi semshiBuiltin         ctermfg=207
+"       hi semshiAttribute       ctermfg=49
+"       hi semshiSelf            ctermfg=249
+"       hi semshiUnresolved      ctermfg=226  cterm=underline
+"       " hi semshiSelected        ctermfg=231  ctermbg=161
+"       hi semshiSelected        ctermfg=161  cterm=underline
+"       hi semshiErrorSign       ctermfg=231  ctermbg=160
+"       hi semshiErrorChar       ctermfg=231  ctermbg=160
+"       sign define semshiError text=E> texthl=semshiErrorSign
+"   endfunction
+"   autocmd FileType python call MyCustomSemshiHighlights()
+"   autocmd ColorScheme * call MyCustomSemshiHighlights()
 
 Plug 'tpope/vim-surround'            " cs surrounding capabilities eg. cs)], csw'
 
 Plug 'christoomey/vim-system-copy'   " cp/cv for copy paste e.g. cvi = paste inside '
 
-Plug 'junegunn/vim-easy-align'       " sounds super cool, never used so far
-  " Start interactive EasyAlign in visual mode (e.g. vipga)
-  xmap ga <Plug>(EasyAlign)
-  " Start interactive EasyAlign for a motion/text object (e.g. gaip)
-  nmap ga <Plug>(EasyAlign)
+" Plug 'junegunn/vim-easy-align'       " sounds super cool, never used so far
+"   " Start interactive EasyAlign in visual mode (e.g. vipga)
+"   xmap ga <Plug>(EasyAlign)
+"   " Start interactive EasyAlign for a motion/text object (e.g. gaip)
+"   nmap ga <Plug>(EasyAlign)
 
-Plug 'sbdchd/vim-shebang'            " automatically add #! stuff to files
-  let g:shebang#shebangs = {
-              \ 'julia': '#!/usr/bin/env julia',
-              \ 'sh': '#!/usr/bin/env bash',
-              \ 'python': '#!/usr/bin/env python',
-              \ 'R': '#!/usr/bin/env Rscript'
-              \}
+" Plug 'sbdchd/vim-shebang'            " automatically add #! stuff to files
+"   let g:shebang#shebangs = {
+"               \ 'julia': '#!/usr/bin/env julia',
+"               \ 'sh': '#!/usr/bin/env bash',
+"               \ 'python': '#!/usr/bin/env python',
+"               \ 'R': '#!/usr/bin/env Rscript'
+"               \}
 
 Plug 'tpope/vim-commentary'          " gc code away
 
-Plug 'tmhedberg/SimpylFold'          " Better Python folding
-  let g:SimpylFold_docstring_preview=1
-  set foldmethod=indent
-  set foldlevel=99
+" Plug 'tmhedberg/SimpylFold'          " Better Python folding
+"   let g:SimpylFold_docstring_preview=1
+"   set foldmethod=indent
+"   set foldlevel=99
 
-Plug 'Konfekt/FastFold'              " Suggested by SimplyFold to improve speed
+" Plug 'Konfekt/FastFold'              " Suggested by SimplyFold to improve speed
 
 " Tags management
 Plug 'universal-ctags/ctags'
 
-Plug 'ludovicchabant/vim-gutentags'
-  " Do not pollute projects with tag files, keep them all in one place.
-  let g:gutentags_cache_dir = '~/.tags_dir'
+" Coc handle tags, do I still need this?
+" Plug 'ludovicchabant/vim-gutentags'
+"   " Do not pollute projects with tag files, keep them all in one place.
+"   let g:gutentags_cache_dir = '~/.tags_dir'
 
 Plug 'majutsushi/tagbar'
   let g:tagbar_autofocus = 1
@@ -177,21 +208,15 @@ Plug 'majutsushi/tagbar'
 
 " Organization
 Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
-  augroup vimwikicmds
-      " the second autocmd is executed only for matching filetypes
-      autocmd FileType vimwiki
-          \ autocmd InsertLeave <buffer> :update
-  augroup end
-  let $VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
-  function! s:QuickNote ()
-    py import uuid
-    let l:id = pyeval('str(uuid.uuid4())[24:]')
-    let l:path = $VIMWIKI_DIR . "/note-". l:id . ".md"
-    execute "e " . l:path
-    execute "normal! inote\<C-R>=UltiSnips#ExpandSnippet()\<CR>"
-  endfunction
+  " https://github.com/vimwiki/vimwiki/issues/282#issuecomment-270471232
+  " Use unavailable mapping to remove the default ones
+  let g:vimwiki_map_prefix = '<F13>'
+  nmap <Leader>ww <Plug>VimwikiIndex
+  nmap <Leader>wd <Plug>VimwikiDeleteLink
+  nmap <Leader>wr <Plug>VimwikiRenameLink
   let g:vimwiki_global_ext=0 " Prevent creation of temporary wikis so that markdown file are not flagged vimwiki
-  let g:vimwiki_folding='expr'
+  " let g:vimwiki_folding='expr'
+  let g:vimwiki_folding='custom'
   let g:vimwiki_table_mappings=0 " Prevent conflict with UltiSnips tab completion
   let g:vimwiki_list = [{'path': '~/Dropbox/vimwiki/',
                         \ 'syntax': 'markdown',
@@ -208,42 +233,98 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
             \ , 'ctagsbin':'/home/lapo/dotfiles/neovim/vwtags.py'
             \ , 'ctagsargs': 'markdown'
             \ }
+  let $VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
+  function! s:QuickNote ()
+    py from uuid import uuid4
+    py from datetime import datetime
+    let l:id = pyeval("datetime.today().strftime('%Y%m%d%H%M') + uuid4().hex[:8]")
+    let l:path = $VIMWIKI_DIR . "/". l:id . ".md"
+    execute "e " . l:path
+    " execute "normal! inote\<C-R>=UltiSnips#ExpandSnippet()\<CR>i"
+  endfunction
+  function! s:GetVisualSelection()
+    let [line_start, column_start] = getpos("'<")[1:2]
+    let [line_end, column_end] = getpos("'>")[1:2]
+    let lines = getline(line_start, line_end)
+    if len(lines) == 0
+        return ''
+    endif
+    let lines[-1] = lines[-1][: column_end - (&selection == 'inclusive' ? 1 : 2)]
+    let lines[0] = lines[0][column_start - 1:]
+    return join(lines, "\n")
+  endfunction
+  function! s:MakeLink(title, file)
+    " use replace to turn the selection into a markdown link [a:title](a:file)
+    let l:line_num = line(".")
+    let l:line = getline(l:line_num)
+    call setline(l:line_num, substitute(l:line, '\('. a:title .'\)', '[\1]('. a:file .')', "g"))
+  endfunction
+  function! s:AddNote ()
+    py from uuid import uuid4
+    py from datetime import datetime
+    let l:id = pyeval("datetime.today().strftime('%Y%m%d%H%M') + uuid4().hex[:8]")
+    let l:file = l:id . ".md"
+    " Be carefull to call this function from visual mode
+    let l:name = s:GetVisualSelection()
+    call s:MakeLink(l:name, l:file)
+    " open link takes care of creating the file and allows for going back with backspace
+    call vimwiki#base#open_link("e",l:file)
+  endfunction
+  augroup vimwikicmds
+      autocmd FileType vimwiki
+          \ autocmd InsertLeave <buffer> :update
+      autocmd FileType vimwiki vmap <leader>no :call <SID>AddNote()<CR>
+  augroup end
   nmap <leader>no :call <SID>QuickNote()<CR>
+  " copy the current file name to use it in notes
+  nmap <leader>cpf :let @+ = expand("%:t")<CR>
 
-Plug 'itchyny/calendar.vim'
+" Plug 'itchyny/calendar.vim'
 
 Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
 
 Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
 
-Plug 'ap/vim-buftabline'            " Show open buffers
-  let g:buftabline_numbers=2      " Show ordinal tab numbers (not the vim buffer ones)
+" Plug 'ap/vim-buftabline'            " Show open buffers
+"   let g:buftabline_numbers=2      " Show ordinal tab numbers (not the vim buffer ones)
   " Doesn't display correct with CascadiaCode Nerd Font
   " let g:buftabline_separators=1   " Add vertical bars beween tabs
   " Use leader+number to quickly change tab
-  nmap <leader>1 <Plug>BufTabLine.Go(1)
-  nmap <leader>2 <Plug>BufTabLine.Go(2)
-  nmap <leader>3 <Plug>BufTabLine.Go(3)
-  nmap <leader>4 <Plug>BufTabLine.Go(4)
-  nmap <leader>5 <Plug>BufTabLine.Go(5)
-  nmap <leader>6 <Plug>BufTabLine.Go(6)
-  nmap <leader>7 <Plug>BufTabLine.Go(7)
-  nmap <leader>8 <Plug>BufTabLine.Go(8)
-  nmap <leader>9 <Plug>BufTabLine.Go(9)
-  nnoremap <Leader>- :bd<Cr>
+  " nmap <leader>1 <Plug>BufTabLine.Go(1)
+  " nmap <leader>2 <Plug>BufTabLine.Go(2)
+  " nmap <leader>3 <Plug>BufTabLine.Go(3)
+  " nmap <leader>4 <Plug>BufTabLine.Go(4)
+  " nmap <leader>5 <Plug>BufTabLine.Go(5)
+  " nmap <leader>6 <Plug>BufTabLine.Go(6)
+  " nmap <leader>7 <Plug>BufTabLine.Go(7)
+  " nmap <leader>8 <Plug>BufTabLine.Go(8)
+  " nmap <leader>9 <Plug>BufTabLine.Go(9)
 
 Plug 'itchyny/lightline.vim'        " lightweight status line
   let g:lightline = {
+      \ 'mode_map': {
+      \    'n' : 'N',
+      \    'i' : 'I',
+      \    'R' : 'R',
+      \    'v' : 'V',
+      \    'V' : 'VL',
+      \    "\<C-v>": 'VB',
+      \    'c' : 'C',
+      \    's' : 'S',
+      \    'S' : 'SL',
+      \    "\<C-s>": 'SB',
+      \    't': 'T',
+      \ },
       \ 'colorscheme': 'onedark',
       \ 'active': {
       \   'left': [ 
       \             [ 'mode', 'paste','readonly','coc_warning','coc_error'],
-      \             [ 'cocstatus' ] 
+      \             [ 'cocstatus' ],
+      \             [ 'filename' ] 
       \           ],
       \   'right': [ 
       \              [ 'gitbranch','lineinfo' ],
-      \              [ 'modified','fileencoding','filetype','sync'],
-      \              [ 'filename' ] 
+      \              [ 'modified','fileencoding','filetype','sync']
       \            ]
       \ },
       \ 'inactive': {
@@ -282,10 +363,10 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     return &modifiable && &modified ? '[+]' : ''
 	endfunction
   " From https://github.com/neoclide/coc.nvim/issues/401
-  " Show CocDiagnistics in lightline
+  " Show CocDiagnistics in lightline, hide on small windows/splits
 	function! CocStatusMsg() abort
-	  return get(g:, 'coc_status', '')
-	endfunction
+	  return winwidth(0) > 100 ? get(g:, 'coc_status', '') : ''
+  endfunction
   let g:coc_user_config = { 
     \ 'diagnostic': {
     \   'errorSign': 'E',
@@ -345,29 +426,50 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     call lightline#colorscheme()
   endfunction
   autocmd! VimEnter * call SetupLightlineColors()
-  nmap <leader>bind :windo set scb!<CR>
+  " nmap <leader>bind :windo set scb!<CR>
+  command! Bind :windo set scb!
 
 " Zen mode
 Plug 'junegunn/goyo.vim'
+  function Get_color(group, attr)
+    " https://github.com/junegunn/goyo.vim/blob/6b6ed2734084fdbb6315357ddcaecf9c8e6f143d/autoload/goyo.vim#L31
+    return synIDattr(synIDtrans(hlID(a:group)), a:attr)
+  endfunction
+  " let bg = s:get_color('Normal', 'bg#')
+  function! ReturnHighlightTerm(group, term)
+    " https://github.com/junegunn/goyo.vim/blob/6b6ed2734084fdbb6315357ddcaecf9c8e6f143d/autoload/goyo.vim#L31
+    " Store output of group to variable
+    let output = execute('hi ' . a:group)
+    " Find the term we're looking for
+    return matchstr(output, a:term.'=\zs\S*')
+  endfunction
+  " let b = ReturnHighlightTerm('StatusLine', 'ctermbg')
   function! s:goyo_enter()
-    " keep the text in the middle of the page while in goyo
-    set showtabline=0
     set noshowmode
     set noshowcmd
-    Limelight
+    set scrolloff=999
+    " no idea why I need these but otherwise bg is not set... TODO FIND OUT WHY
+    set background=dark
+    " hide annoying ~ delimiting end of buffer
+    highlight EndOfBuffer ctermfg=bg ctermbg=bg
+    " Limelight
   endfunction
   function! s:goyo_leave()
-    set showtabline=2
     set showmode
     set showcmd
-    :call buftabline#update(0)
-    Limelight!
+    set scrolloff=4
+    " no idea why I need these but otherwise bg is not set... TODO FIND OUT WHY
+    set background=dark
+    " hide annoying ~ delimiting end of buffer
+    highlight EndOfBuffer ctermfg=bg ctermbg=bg
+    " :call buftabline#update(0) not needed since I don't use buftabline
+    " Limelight!
   endfunction
   autocmd! User GoyoEnter nested call <SID>goyo_enter()
   autocmd! User GoyoLeave nested call <SID>goyo_leave()
   " autocmd! User GoyoEnter Limelight
   " autocmd! User GoyoLeave Limelight!
-  nnoremap <leader>go :Goyo<CR>
+  " nnoremap <leader>go :Goyo<CR>
 
 " highlight the area where writing and fade out the rest
 Plug 'junegunn/limelight.vim'
@@ -423,7 +525,18 @@ Plug 'junegunn/fzf.vim'
     autocmd  FileType fzf set laststatus=0 noshowmode noruler
       \| autocmd BufLeave <buffer> set laststatus=2 showmode ruler
   endif
+  " from https://coreyja.com/vim-spelling-suggestions-fzf/#fnref-1 
+  function! FzfSpellSink(word)
+    exe 'normal! "_ciw'.a:word
+  endfunction
+  function! FzfSpell()
+    let suggestions = spellsuggest(expand("<cword>"))
+    return fzf#run({'source': suggestions, 'sink': function("FzfSpellSink"), 'down': 10 })
+  endfunction
+  nnoremap z= :call FzfSpell()<CR>
   nnoremap <leader>f :Files<CR>
+  nnoremap <leader>b :Buffers<CR>
+  nnoremap <leader>l :Lines<CR>
   " rg -> ripgrep , rw -> ripgrep current word
   nnoremap <leader>rg :Rg<CR>
   nnoremap <leader>rw :Rg <C-R><C-W><CR>
@@ -442,6 +555,8 @@ Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
   map  N <Plug>(easymotion-prev)
   " Turn on case-insensitive feature
   let g:EasyMotion_smartcase = 1
+  " Disable mappings
+  let g:EasyMotion_do_mapping = 0
 
 Plug 'scrooloose/nerdtree'       " better netrw vim navigation
   silent! nmap <F7> :NERDTreeToggle<CR>
@@ -470,42 +585,43 @@ Plug 'mbbill/undotree'           " More easily navigate vim's poweful undo tree
   let g:undotree_SetFocusWhenToggle = 1
 
 Plug 'tpope/vim-repeat'          " Allows repeating some plugins operations using .
-Plug 'kassio/neoterm'            " easier terminal management in vim
-  let g:neoterm_direct_open_repl=1
-  let g:neoterm_repl_python='/home/lapo/miniconda3/envs/deep/bin/ipython --no-autoindent --pylab'
-  let g:neoterm_default_mod=':vertical'
-  let g:neoterm_size=80
-  let g:neoterm_autoscroll=1
-  " My own functions to try to run python code in an ipython terminal
-  function! IPythonLoadCurrentFile()
-    " Get absolute path of current file
-    let path = expand('%:p')
-    " Send ipython magic to load current file, . does string concatenation
-    execute "T %load " . path
-    " I have no idea how to send the final newline, I'll use another magic as a
-    " hack, people like seeing time and shit anyways.
-    execute "T %time"
-  endfunction
-  function! IPythonLoadCurrentLine()
-    " yank current line to clipboard
-    normal! "+yy
-    " paste in python REPL from clipboard using %paste magic
-    execute "T %paste"
-    " move down a line to chain multiple calls easily
-    normal! j
-  endfunction
-  " Without range it will call the function for every line in the range
-  function! IPythonLoadCurrentVisualSelection() range
-    " The range has been yanked to clipboard already
-    execute "T %paste"
-    " Move to the end of visual selection and then down a line, see :h `> for
-    " info
-    normal! `>j
-  endfunction
-  nnoremap <leader>t :call IPythonLoadCurrentLine()<CR>
-  vnoremap <leader>t "+y<CR>:call IPythonLoadCurrentVisualSelection()<CR>
-  nnoremap <leader>T :call IPythonLoadCurrentFile()<CR>
-  tnoremap <ESC> <C-\><C-n>
+
+" Plug 'kassio/neoterm'            " easier terminal management in vim
+"   let g:neoterm_direct_open_repl=1
+"   let g:neoterm_repl_python='/home/lapo/miniconda3/envs/deep/bin/ipython --no-autoindent --pylab'
+"   let g:neoterm_default_mod=':vertical'
+"   let g:neoterm_size=80
+"   let g:neoterm_autoscroll=1
+"   " My own functions to try to run python code in an ipython terminal
+"   function! IPythonLoadCurrentFile()
+"     " Get absolute path of current file
+"     let path = expand('%:p')
+"     " Send ipython magic to load current file, . does string concatenation
+"     execute "T %load " . path
+"     " I have no idea how to send the final newline, I'll use another magic as a
+"     " hack, people like seeing time and shit anyways.
+"     execute "T %time"
+"   endfunction
+"   function! IPythonLoadCurrentLine()
+"     " yank current line to clipboard
+"     normal! "+yy
+"     " paste in python REPL from clipboard using %paste magic
+"     execute "T %paste"
+"     " move down a line to chain multiple calls easily
+"     normal! j
+"   endfunction
+"   " Without range it will call the function for every line in the range
+"   function! IPythonLoadCurrentVisualSelection() range
+"     " The range has been yanked to clipboard already
+"     execute "T %paste"
+"     " Move to the end of visual selection and then down a line, see :h `> for
+"     " info
+"     normal! `>j
+"   endfunction
+"   nnoremap <leader>t :call IPythonLoadCurrentLine()<CR>
+"   vnoremap <leader>t "+y<CR>:call IPythonLoadCurrentVisualSelection()<CR>
+"   nnoremap <leader>T :call IPythonLoadCurrentFile()<CR>
+"   tnoremap <ESC> <C-\><C-n>
 
 Plug 'SirVer/ultisnips'          " custom snippets
   " Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
@@ -545,9 +661,9 @@ call plug#end()
 "     set termguicolors
 " endif
 
-set background=dark " Because dark is cool
-set encoding=utf8
 colorscheme onedark
+set encoding=utf8
+set background=dark " Because dark is cool
 
 " }}}
 " ============================================================================
@@ -584,7 +700,7 @@ set omnifunc=syntaxcomplete#Complete " On <c-x><c-o> use the file syntax to gues
 set autoread                           " Reload files changed outside vim
 set lazyredraw                         " Don't redraw while executing macros (good performance setting)
 set linebreak                          " Stop annoying 80 chars line wrapping
-set textwidth=500                      "
+" set textwidth=500                      "
 set scrolloff=4
 
 " Search down into subfolders
@@ -655,13 +771,38 @@ let g:python_host_prog="/home/lapo/miniconda3/envs/neovim2/bin/python"
 " Mappings {{{
 " ============================================================================
 
-" easily open and source neovim config file
-nmap <leader>conf :e $MYVIMRC<CR>
-
+" Use capital W as a shortcut to save and quit
+" nnoremap W :w<CR>
+" nnoremap Q :q<CR>
+" except... it prevents me to move by full words, let's try the Ctrl combo instead
+" nnoremap <C-w> :w<CR>
+" Sounded good except that now I have this musclememory <C-w> = Save
+" Guess what? I keep closing tabs in firefox >_>
+" Let's try using leader instead, obviously <Leader>w is already used by Vimwiki...
+" Maybe... s as in Save?
+nnoremap <Leader>s :w<CR>
+nnoremap <Leader>q :q<CR>
 " execute current line in shell and paste results under it
 " nmap <leader>e :exec 'r!'.getline('..')<CR>
 " execute current line in shell and paste results above it
-nmap <leader>ex !!bash<CR>
+nnoremap <leader>ex !!bash<CR>
+" easily open and source neovim config file
+nnoremap <leader>conf :e $MYVIMRC<CR>
+" alternate between current file and previous file
+nnoremap <leader>p <C-^> 
+" insert date
+nnoremap <leader>date :put =strftime('%Y-%m-%d')<CR>
+" Switch CWD to the directory of the open buffer
+nnoremap <leader>cd :cd %:p:h<cr>:pwd<cr>
+" Take quick notes, with = so that is close to buffer close
+nnoremap <leader>= :e ~/buffer.md<CR>
+nnoremap <leader>- :bd<Cr>
+" Easier mapping to toggle fold
+nnoremap <leader>0 za
+nnoremap <leader>wc :echo wordcount()["words"]<CR>
+" Type a replacement term and press . to repeat the replacement again. Useful
+" for replacing a few instances of the term (comparable to multiple cursors)
+nnoremap <silent> s* :let @/='\<'.expand('<cword>').'\>'<CR>cgn
 
 " Delete trailing white space on save, useful for some filetypes ;)
 fun! CleanExtraSpaces()
@@ -695,20 +836,6 @@ nnoremap <C-H> <C-W><C-H>
 nnoremap j gj
 nnoremap k gk
 
-" Use capital W as a shortcut to save and quit
-" nnoremap W :w<CR>
-" nnoremap Q :q<CR>
-" except... it prevents me to move by full words, let's try the Ctrl combo instead
-" nnoremap <C-w> :w<CR>
-" Sounded good except that now I have this musclememory <C-w> = Save
-" Guess what? I keep closing tabs in firefox >_>
-" Let's try using leader instead, obviously <Leader>w is already used by Vimwiki...
-" Maybe... s as in Save?
-nnoremap <Leader>s :w<CR>
-nnoremap <Leader>q :q<CR>
-" nnoremap <C-W> :w<CR>
-" nnoremap <C-Q> :q<CR>
-
 " center current line after jumping to prev/next locations
 nnoremap <C-o> <C-o>zz
 nnoremap <C-i> <C-i>zz
@@ -716,14 +843,8 @@ nnoremap <C-i> <C-i>zz
 " DISABLE FUCKING EXMODE UNTIL I FIND A BETTER USE FOR Q
 nmap Q <Nop>
 
-" Switch CWD to the directory of the open buffer
-map <leader>cd :cd %:p:h<cr>:pwd<cr>
-
 " Remap VIM 0 to first non-blank character
 map 0 ^
-
-" Take quick notes, with = so that is close to buffer close
-map <leader>= :e ~/buffer.md<CR>
 
 " }}}
 " ============================================================================

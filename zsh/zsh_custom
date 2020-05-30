@@ -12,6 +12,11 @@ alias tarlist="tar -tvf"
 alias targzlist="tar -ztvf"
 alias tarbz2list="tar -jtvf"
 
+cd_with_fzf(){
+  cd $HOME && cd "$(fd -t d | fzf --preview="tree -L 1 {}" --bind="space:toggle-preview" --preview-window=:hidden)"
+}
+bindkey -s '^p' 'cd_with_fzf\n'
+
 # Use lf to switch directories
 lfcd () {
     tmp="$(mktemp)"
@@ -22,8 +27,9 @@ lfcd () {
         [ -d "$dir" ] && [ "$dir" != "$(pwd)" ] && cd "$dir"
     fi
 }
+# export OPENER="rifle"
 # Using ranger instead
-# bindkey -s '^o' 'lfcd\n'
+bindkey -s '^l' 'lfcd\n'
 bindkey -s '^o' 'ranger\n'
 
 # Edit line in vim with ctrl-e:

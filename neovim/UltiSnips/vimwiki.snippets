@@ -1,21 +1,27 @@
-snippet diary "A personal diary entry" b
-# `date +"%a %d"` - ${1:Title}
+global !p
+def complete(t,opts):
+	if len(t) <= 1:
+		return "" # waiting for input
+	opts = [opt[len(t):] for opt in opts if opt.startswith(t)]
+	if len(opts) == 1:
+		return opts[0]
+	return " "+" | ".join(opts)
 
-## DONE
-$2
-
-## Notes
-$3
-
-## Resources
-$0
-endsnippet
+def get_vimwiki_tags():
+	from pathlib import Path
+	file = Path("/home/lapo/Dropbox/vimwiki/.vimwiki_tags")
+	lines = file.read_text().split("\n")
+	tags = set( ":"+line.split("\t")[0]+":" for line in lines if len(line) > 0 and line[:2] != "!_" )
+	return sorted(list(tags))
+endglobal
 
 snippet note "A quick note with date and tags" b
 ---
-tags: $1
-date: `date +"%Y-%m-%d"`
+tags: $1`!p opts=get_vimwiki_tags()
+snip.rv=complete(t[1].split(" ")[-1], opts)`
 title: $2
+date: `date +"%Y-%m-%d %H:%M"`
+id: `!p snip.rv = snip.basename`
 ---
 
 $0
