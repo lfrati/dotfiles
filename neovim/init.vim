@@ -70,13 +70,22 @@ Plug 'plasticboy/vim-markdown'
   au BufEnter *.md setlocal foldmethod=expr
   " au BufEnter *.md setlocal foldlevel=99
 
+" God this plugin is good. Live rendering, cursor syncing
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
   " nmap <leader>md <Plug>MarkdownPreviewToggle
   nmap <leader>m <Plug>MarkdownPreviewToggle
 
-Plug 'terryma/vim-multiple-cursors'
+Plug 'terryma/vim-multiple-cursors' " <C-n> for easy multi-cursor edit
+  " If set to 0, insert mappings won't be supported in Insert mode anymore.
+  " (default : 1)
   let g:multiple_cursors_support_imap = 0
+  " If set to 1, then pressing g:multi_cursor_quit_key in Visual mode will
+  " quit and delete all existing cursors, just skipping normal mode with
+  " multiple cursors.  (default : 0)
   let g:multi_cursor_exit_from_visual_mode = 1
+  " If set to 1, then pressing g:multi_cursor_quit_key in Insert mode will
+  " quit and delete all existing cursors, just skipping normal mode with
+  " multiple cursors.  (default : 0)
   let g:multi_cursor_exit_from_insert_mode = 1
 
 Plug 'airblade/vim-gitgutter'
@@ -85,12 +94,6 @@ Plug 'airblade/vim-gitgutter'
     let [a,m,r] = GitGutterGetHunkSummary()
     return printf('+%d ~%d -%d', a, m, r)
   endfunction
-
-" Python specific bindings from https://stackoverflow.com/a/54108005
-" augroup pybindings
-"   autocmd! pybindings
-"   autocmd Filetype python nmap <buffer> <silent> <leader>isort :Isort<CR>
-" augroup end
 
 Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
   " TextEdit might fail if hidden is not set.
@@ -141,74 +144,14 @@ Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
     autocmd Filetype python,javascript :call GoCoc()
   augroup end
 
-Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
-  " Color customizations are at the end of the file
-  " hi CurrentWord ctermbg=236
-  " hi CurrentWordTwins ctermbg=237
+Plug 'SirVer/ultisnips'              " Custom snippets
+  " Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
+  let g:UltiSnipsExpandTrigger="<C-u>"
+  let g:UltiSnipsJumpForwardTrigger="<Down>"
+  let g:UltiSnipsJumpBackwardTrigger="<Up>"
+  let g:UltiSnipsSnippetDirectories=[$HOME.'/dotfiles/neovim/UltiSnips']
 
-" " Very well made python aware plugin, I'm using it for semantig highlight
-" Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
-"   function MyCustomSemshiHighlights()
-"       hi semshiGlobal          ctermfg=red
-"       hi semshiLocal           ctermfg=209
-"       hi semshiGlobal          ctermfg=214
-"       hi semshiImported        ctermfg=180
-"       hi semshiParameter       ctermfg=75
-"       hi semshiParameterUnused ctermfg=117  cterm=underline
-"       hi semshiFree            ctermfg=218
-"       hi semshiBuiltin         ctermfg=207
-"       hi semshiAttribute       ctermfg=49
-"       hi semshiSelf            ctermfg=249
-"       hi semshiUnresolved      ctermfg=226  cterm=underline
-"       " hi semshiSelected        ctermfg=231  ctermbg=161
-"       hi semshiSelected        ctermfg=161  cterm=underline
-"       hi semshiErrorSign       ctermfg=231  ctermbg=160
-"       hi semshiErrorChar       ctermfg=231  ctermbg=160
-"       sign define semshiError text=E> texthl=semshiErrorSign
-"   endfunction
-"   autocmd FileType python call MyCustomSemshiHighlights()
-"   autocmd ColorScheme * call MyCustomSemshiHighlights()
-
-Plug 'tpope/vim-surround'            " cs surrounding capabilities eg. cs)], csw'
-
-Plug 'christoomey/vim-system-copy'   " cp/cv for copy paste e.g. cvi = paste inside '
-
-" Plug 'junegunn/vim-easy-align'       " sounds super cool, never used so far
-"   " Start interactive EasyAlign in visual mode (e.g. vipga)
-"   xmap ga <Plug>(EasyAlign)
-"   " Start interactive EasyAlign for a motion/text object (e.g. gaip)
-"   nmap ga <Plug>(EasyAlign)
-
-" Plug 'sbdchd/vim-shebang'            " automatically add #! stuff to files
-"   let g:shebang#shebangs = {
-"               \ 'julia': '#!/usr/bin/env julia',
-"               \ 'sh': '#!/usr/bin/env bash',
-"               \ 'python': '#!/usr/bin/env python',
-"               \ 'R': '#!/usr/bin/env Rscript'
-"               \}
-
-Plug 'tpope/vim-commentary'          " gc code away
-
-" Plug 'tmhedberg/SimpylFold'          " Better Python folding
-"   let g:SimpylFold_docstring_preview=1
-"   set foldmethod=indent
-"   set foldlevel=99
-
-" Plug 'Konfekt/FastFold'              " Suggested by SimplyFold to improve speed
-
-" Tags management
-Plug 'universal-ctags/ctags'
-
-" Coc handle tags, do I still need this?
-" Plug 'ludovicchabant/vim-gutentags'
-"   " Do not pollute projects with tag files, keep them all in one place.
-"   let g:gutentags_cache_dir = '~/.tags_dir'
-
-" Plug 'majutsushi/tagbar'
-"   let g:tagbar_autofocus = 1
-"   nmap <F6> :TagbarToggle<CR>
-
-" Organization
+" My zettelkasten for life?
 Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   let g:vimwiki_key_mappings =
     \ {
@@ -304,18 +247,15 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   fun! GoVimwiki()
     " autocmd InsertLeave <buffer> :update
     autocmd BufEnter <buffer> setlocal signcolumn=no
-
     " Link navigation mappings
     nmap <buffer> <TAB> <Plug>VimwikiNextLink
     nmap <buffer> <S-TAB> <Plug>VimwikiPrevLink
     nmap <buffer> <BS> <Plug>VimwikiGoBackLink
     " replaced by my link management functions
     " nmap <buffer> <CR> <Plug>VimwikiFollowLink
-
     " File management mappings
     nmap <buffer> <leader>wd <Plug>VimwikiDeleteFile
     nmap <buffer> <leader>wr <Plug>VimwikiRenameFile
-
     " Custom mappings
     " WikiBackward : Create link to alternate-file (<C-^>)
     " Usage should be:
@@ -340,27 +280,6 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   " copy the current file name to use it in notes
   " nmap <leader>cpf :let @+ = expand("%:t")<CR>
   " easily create link to previous buffer
-
-" Plug 'itchyny/calendar.vim'
-
-Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
-
-Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
-
-" Plug 'ap/vim-buftabline'            " Show open buffers
-"   let g:buftabline_numbers=2      " Show ordinal tab numbers (not the vim buffer ones)
-  " Doesn't display correct with CascadiaCode Nerd Font
-  " let g:buftabline_separators=1   " Add vertical bars beween tabs
-  " Use leader+number to quickly change tab
-  " nmap <leader>1 <Plug>BufTabLine.Go(1)
-  " nmap <leader>2 <Plug>BufTabLine.Go(2)
-  " nmap <leader>3 <Plug>BufTabLine.Go(3)
-  " nmap <leader>4 <Plug>BufTabLine.Go(4)
-  " nmap <leader>5 <Plug>BufTabLine.Go(5)
-  " nmap <leader>6 <Plug>BufTabLine.Go(6)
-  " nmap <leader>7 <Plug>BufTabLine.Go(7)
-  " nmap <leader>8 <Plug>BufTabLine.Go(8)
-  " nmap <leader>9 <Plug>BufTabLine.Go(9)
 
 Plug 'itchyny/lightline.vim'        " lightweight status line
   let g:lightline = {
@@ -531,8 +450,11 @@ Plug 'junegunn/goyo.vim'
 Plug 'junegunn/limelight.vim'
   let g:limelight_conceal_ctermfg = 237
 
-" fuzzy finding for the win
+" The third component of the holy trinity of plugins 
+" (fzf + vimwiki + easymotion)
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+
+Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
 
 Plug 'junegunn/fzf.vim'
   let g:fzf_colors =
@@ -550,8 +472,8 @@ Plug 'junegunn/fzf.vim'
     \ 'spinner': ['fg', 'Label'],
     \ 'header':  ['fg', 'Comment'] }
   " Use FZF to search in current file dir with preview
-  command! -bang -nargs=? -complete=dir Files
-      \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
+  " command! -bang -nargs=? -complete=dir Files
+  "     \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
   " Offload interactive search to Rg, use FzF only as a wrapper around it, also add preview
   " USES FUGITIVE FOR HANDLING GIT
   function! GitAwarePath()
@@ -581,7 +503,7 @@ Plug 'junegunn/fzf.vim'
   " Use RipGrep to search inside files
   command! -nargs=* -bang Rg call RipgrepFzf(<q-args>, <bang>0) 
   " When fzf starts in a terminal buffer, the file type of the buffer is set to fzf. So you can set up FileType fzf autocmd to
-  " customize the settings of the window.For example, if you use the default layout ({'down': '~40%'}) on Neovim, you might
+  " customize the settings of the window. For example, if you use the default layout ({'down': '~40%'}) on Neovim, you might
   " want to temporarily disable the statusline for a cleaner look.
   if has('nvim') && !exists('g:fzf_layout')
     autocmd! FileType fzf
@@ -596,16 +518,13 @@ Plug 'junegunn/fzf.vim'
     let suggestions = spellsuggest(expand("<cword>"))
     return fzf#run({'source': suggestions, 'sink': function("FzfSpellSink"), 'down': 10 })
   endfunction
-  nnoremap z= :call FzfSpell()<CR>
+  nnoremap <leader>fd :call FzfSpell()<CR>
   nnoremap <leader>ff :Files<CR>
   nnoremap <leader>fb :Buffers<CR>
   nnoremap <leader>fl :Lines<CR>
-  " rg -> ripgrep , rw -> ripgrep current word
   nnoremap <leader>fg :Rg<CR>
   nnoremap <leader>fw :Rg <C-R><C-W><CR>
-  " command! -bang Notes call fzf#vim#files(g:VIMWIKI_DIR, <bang>0)
-  " command! -bang -nargs=? -complete=dir Notes
-  "   \ call fzf#vim#files(g:VIMWIKI_DIR, fzf#vim#with_preview({'options': ['--layout=reverse', '--info=inline']}), <bang>0)
+  " Notes is part of the vimwiki mappings
   command! -bang -nargs=* Notes
   \ call fzf#vim#grep(
   \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -- '.shellescape('tags:'), 1,
@@ -640,6 +559,7 @@ Plug 'liuchengxu/vim-which-key'
   let g:which_key_map.f = {
         \ 'name' : '+fzf  ',
         \ 'b' : 'Buffers  ',
+        \ 'd' : 'Dictionary  ',
         \ 'f' : 'Files  ',
         \ 'g' : 'RipGrep  ',
         \ 'l' : 'Lines  ',
@@ -656,11 +576,8 @@ Plug 'liuchengxu/vim-which-key'
     \| autocmd BufLeave <buffer> set laststatus=2 showmode ruler
   nnoremap <silent> <leader> :<c-u>WhichKey '<Space>'<CR>
   " vnoremap <silent> <leader> :<c-u>WhichKeyVisual '<Space>'<CR>
-  " ADD register afte the Plug end
+  " ADD register after the Plug end
   " call which_key#register('<Space>', "g:which_key_map")
-
-
-Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
 
 Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
   set nohlsearch " easymotion will do the highlighting
@@ -676,14 +593,6 @@ Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
   let g:EasyMotion_smartcase = 1
   " Disable mappings
   let g:EasyMotion_do_mapping = 0
-
-Plug 'scrooloose/nerdtree'       " better netrw vim navigation
-  silent! nmap <F7> :NERDTreeToggle<CR>
-
-" Nicer syntax highlight in NERDTree
-Plug 'tiagofumo/vim-nerdtree-syntax-highlight'
-
-Plug 'Xuyuanp/nerdtree-git-plugin'
 
 Plug 'mbbill/undotree'           " More easily navigate vim's poweful undo tree
   if has("persistent_undo")
@@ -703,57 +612,24 @@ Plug 'mbbill/undotree'           " More easily navigate vim's poweful undo tree
   endif
   let g:undotree_SetFocusWhenToggle = 1
 
+Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
+  " Color customizations are at the end of the file
+  " hi CurrentWord ctermbg=236
+  " hi CurrentWordTwins ctermbg=237
+
+Plug 'tpope/vim-surround'            " cs surrounding capabilities eg. cs)], csw'
+
+Plug 'christoomey/vim-system-copy'   " cp/cv for copy paste e.g. cvi = paste inside '
+
+Plug 'tpope/vim-commentary'          " gc code away
+
+Plug 'universal-ctags/ctags'         " Tags management
+
 Plug 'tpope/vim-repeat'          " Allows repeating some plugins operations using .
 
-" Plug 'kassio/neoterm'            " easier terminal management in vim
-"   let g:neoterm_direct_open_repl=1
-"   let g:neoterm_repl_python='/home/lapo/miniconda3/envs/deep/bin/ipython --no-autoindent --pylab'
-"   let g:neoterm_default_mod=':vertical'
-"   let g:neoterm_size=80
-"   let g:neoterm_autoscroll=1
-"   " My own functions to try to run python code in an ipython terminal
-"   function! IPythonLoadCurrentFile()
-"     " Get absolute path of current file
-"     let path = expand('%:p')
-"     " Send ipython magic to load current file, . does string concatenation
-"     execute "T %load " . path
-"     " I have no idea how to send the final newline, I'll use another magic as a
-"     " hack, people like seeing time and shit anyways.
-"     execute "T %time"
-"   endfunction
-"   function! IPythonLoadCurrentLine()
-"     " yank current line to clipboard
-"     normal! "+yy
-"     " paste in python REPL from clipboard using %paste magic
-"     execute "T %paste"
-"     " move down a line to chain multiple calls easily
-"     normal! j
-"   endfunction
-"   " Without range it will call the function for every line in the range
-"   function! IPythonLoadCurrentVisualSelection() range
-"     " The range has been yanked to clipboard already
-"     execute "T %paste"
-"     " Move to the end of visual selection and then down a line, see :h `> for
-"     " info
-"     normal! `>j
-"   endfunction
-"   fun! GoNeoterm()
-"     nnoremap <buffer> <leader>t :call IPythonLoadCurrentLine()<CR>
-"     vnoremap <buffer> <leader>t "+y<CR>:call IPythonLoadCurrentVisualSelection()<CR>
-"     nnoremap <buffer> <leader>T :call IPythonLoadCurrentFile()<CR>
-"     tnoremap <ESC> <C-\><C-n>
-"   endfun
-"   augroup neotermcmds
-"     autocmd! neotermcmds
-"     autocmd FileType python :call GoNeoterm()
-"   augroup end
+Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
 
-Plug 'SirVer/ultisnips'          " custom snippets
-  " Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
-  let g:UltiSnipsExpandTrigger="<C-u>"
-  let g:UltiSnipsJumpForwardTrigger="<Down>"
-  let g:UltiSnipsJumpBackwardTrigger="<Up>"
-  let g:UltiSnipsSnippetDirectories=[$HOME.'/dotfiles/neovim/UltiSnips']
+Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
 
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
@@ -764,29 +640,6 @@ call which_key#register('<Space>', "g:which_key_map")
 " ============================================================================
 " UI Layout {{{
 " ============================================================================
-
-""Use 24-bit (true-color) mode in Vim/Neovim when outside tmux.
-""If you're using tmux version 2.2 or later, you can remove the outermost $TMUX check and use tmux's 24-bit color support
-""(see < http://sunaku.github.io/tmux-24bit-color.html#usage > for more information.)
-"if (empty($TMUX))
-"  if (has("nvim"))
-"  "For Neovim 0.1.3 and 0.1.4 < https://github.com/neovim/neovim/pull/2198 >
-"  let $NVIM_TUI_ENABLE_TRUE_COLOR=1
-"  endif
-"  "For Neovim > 0.1.5 and Vim > patch 7.4.1799 < https://github.com/vim/vim/commit/61be73bb0f965a895bfb064ea3e55476ac175162 >
-"  "Based on Vim patch 7.4.1770 (`guicolors` option) < https://github.com/vim/vim/commit/8a633e3427b47286869aa4b96f2bfc1fe65b25cd >
-"  " < https://github.com/neovim/neovim/wiki/Following-HEAD#20160511 >
-"  if (has("termguicolors"))
-"    set termguicolors
-"  endif
-"endif
-
-" Messes up stuff badly, seems to have started after switching from
-" gnome-terminal to urxvt
-" let t_Co = 256
-" if (has("termguicolors"))
-"     set termguicolors
-" endif
 
 colorscheme onedark
 set encoding=utf8
@@ -956,7 +809,6 @@ augroup vimrccmds     " Source vim configuration upon save
     autocmd BufWritePre *.txt,*.js,*.py,*.wiki,*.sh,*.coffee :call CleanExtraSpaces()
 augroup END
 
-
 " Easier split navigation
 nnoremap <C-J> <C-W><C-J>
 nnoremap <C-K> <C-W><C-K>
@@ -994,6 +846,139 @@ hi VimwikiLink ctermfg=39 cterm=underline
 " because of vim's uneven borders)
 " hi Normal guibg=NONE ctermbg=NONE
 hi EndOfBuffer ctermfg=bg ctermbg=bg
+
+" }}}
+" ============================================================================
+" Plugin Graveyard {{{
+" ============================================================================
+
+" Plug 'scrooloose/nerdtree'       " better netrw vim navigation
+"   silent! nmap <F7> :NERDTreeToggle<CR>
+
+" " Nicer syntax highlight in NERDTree
+" Plug 'tiagofumo/vim-nerdtree-syntax-highlight'
+
+" Plug 'Xuyuanp/nerdtree-git-plugin'
+
+" Plug 'kassio/neoterm'            " easier terminal management in vim
+"   let g:neoterm_direct_open_repl=1
+"   let g:neoterm_repl_python='/home/lapo/miniconda3/envs/deep/bin/ipython --no-autoindent --pylab'
+"   let g:neoterm_default_mod=':vertical'
+"   let g:neoterm_size=80
+"   let g:neoterm_autoscroll=1
+"   " My own functions to try to run python code in an ipython terminal
+"   function! IPythonLoadCurrentFile()
+"     " Get absolute path of current file
+"     let path = expand('%:p')
+"     " Send ipython magic to load current file, . does string concatenation
+"     execute "T %load " . path
+"     " I have no idea how to send the final newline, I'll use another magic as a
+"     " hack, people like seeing time and shit anyways.
+"     execute "T %time"
+"   endfunction
+"   function! IPythonLoadCurrentLine()
+"     " yank current line to clipboard
+"     normal! "+yy
+"     " paste in python REPL from clipboard using %paste magic
+"     execute "T %paste"
+"     " move down a line to chain multiple calls easily
+"     normal! j
+"   endfunction
+"   " Without range it will call the function for every line in the range
+"   function! IPythonLoadCurrentVisualSelection() range
+"     " The range has been yanked to clipboard already
+"     execute "T %paste"
+"     " Move to the end of visual selection and then down a line, see :h `> for
+"     " info
+"     normal! `>j
+"   endfunction
+"   fun! GoNeoterm()
+"     nnoremap <buffer> <leader>t :call IPythonLoadCurrentLine()<CR>
+"     vnoremap <buffer> <leader>t "+y<CR>:call IPythonLoadCurrentVisualSelection()<CR>
+"     nnoremap <buffer> <leader>T :call IPythonLoadCurrentFile()<CR>
+"     tnoremap <ESC> <C-\><C-n>
+"   endfun
+"   augroup neotermcmds
+"     autocmd! neotermcmds
+"     autocmd FileType python :call GoNeoterm()
+"   augroup end
+
+" Python specific bindings from https://stackoverflow.com/a/54108005
+" augroup pybindings
+"   autocmd! pybindings
+"   autocmd Filetype python nmap <buffer> <silent> <leader>isort :Isort<CR>
+" augroup end
+
+" Plug 'junegunn/vim-easy-align'       " sounds super cool, never used so far
+"   " Start interactive EasyAlign in visual mode (e.g. vipga)
+"   xmap ga <Plug>(EasyAlign)
+"   " Start interactive EasyAlign for a motion/text object (e.g. gaip)
+"   nmap ga <Plug>(EasyAlign)
+
+" Plug 'sbdchd/vim-shebang'            " automatically add #! stuff to files
+"   let g:shebang#shebangs = {
+"               \ 'julia': '#!/usr/bin/env julia',
+"               \ 'sh': '#!/usr/bin/env bash',
+"               \ 'python': '#!/usr/bin/env python',
+"               \ 'R': '#!/usr/bin/env Rscript'
+"               \}
+
+" " Very well made python aware plugin, I'm using it for semantig highlight
+" Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
+"   function MyCustomSemshiHighlights()
+"       hi semshiGlobal          ctermfg=red
+"       hi semshiLocal           ctermfg=209
+"       hi semshiGlobal          ctermfg=214
+"       hi semshiImported        ctermfg=180
+"       hi semshiParameter       ctermfg=75
+"       hi semshiParameterUnused ctermfg=117  cterm=underline
+"       hi semshiFree            ctermfg=218
+"       hi semshiBuiltin         ctermfg=207
+"       hi semshiAttribute       ctermfg=49
+"       hi semshiSelf            ctermfg=249
+"       hi semshiUnresolved      ctermfg=226  cterm=underline
+"       " hi semshiSelected        ctermfg=231  ctermbg=161
+"       hi semshiSelected        ctermfg=161  cterm=underline
+"       hi semshiErrorSign       ctermfg=231  ctermbg=160
+"       hi semshiErrorChar       ctermfg=231  ctermbg=160
+"       sign define semshiError text=E> texthl=semshiErrorSign
+"   endfunction
+"   autocmd FileType python call MyCustomSemshiHighlights()
+"   autocmd ColorScheme * call MyCustomSemshiHighlights()
+
+" Plug 'tmhedberg/SimpylFold'          " Better Python folding
+"   let g:SimpylFold_docstring_preview=1
+"   set foldmethod=indent
+"   set foldlevel=99
+
+" Plug 'Konfekt/FastFold'              " Suggested by SimplyFold to improve speed
+
+" Coc handle tags, do I still need this?
+" Plug 'ludovicchabant/vim-gutentags'
+"   " Do not pollute projects with tag files, keep them all in one place.
+"   let g:gutentags_cache_dir = '~/.tags_dir'
+
+" Plug 'majutsushi/tagbar'
+"   let g:tagbar_autofocus = 1
+"   nmap <F6> :TagbarToggle<CR>
+
+" Plug 'itchyny/calendar.vim'
+
+" Plug 'ap/vim-buftabline'            " Show open buffers
+"   let g:buftabline_numbers=2      " Show ordinal tab numbers (not the vim buffer ones)
+  " Doesn't display correct with CascadiaCode Nerd Font
+  " let g:buftabline_separators=1   " Add vertical bars beween tabs
+  " Use leader+number to quickly change tab
+  " nmap <leader>1 <Plug>BufTabLine.Go(1)
+  " nmap <leader>2 <Plug>BufTabLine.Go(2)
+  " nmap <leader>3 <Plug>BufTabLine.Go(3)
+  " nmap <leader>4 <Plug>BufTabLine.Go(4)
+  " nmap <leader>5 <Plug>BufTabLine.Go(5)
+  " nmap <leader>6 <Plug>BufTabLine.Go(6)
+  " nmap <leader>7 <Plug>BufTabLine.Go(7)
+  " nmap <leader>8 <Plug>BufTabLine.Go(8)
+  " nmap <leader>9 <Plug>BufTabLine.Go(9)
+
 
 " }}}
 " ============================================================================
