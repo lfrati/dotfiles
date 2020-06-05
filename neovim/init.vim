@@ -68,10 +68,11 @@ Plug 'plasticboy/vim-markdown'
   endfunction
   au BufEnter *.md setlocal foldexpr=MarkdownLevel()  
   au BufEnter *.md setlocal foldmethod=expr
-  au BufEnter *.md setlocal foldlevel=1
+  " au BufEnter *.md setlocal foldlevel=99
 
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
-  nmap <leader>md <Plug>MarkdownPreviewToggle
+  " nmap <leader>md <Plug>MarkdownPreviewToggle
+  nmap <leader>m <Plug>MarkdownPreviewToggle
 
 Plug 'terryma/vim-multiple-cursors'
   let g:multiple_cursors_support_imap = 0
@@ -106,7 +107,7 @@ Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
   set shortmess+=c
   " Always show the signcolumn, otherwise it would shift the text each time
   " diagnostics appear/become resolved.
-  set signcolumn=yes
+  " set signcolumn=yes
   function! s:check_back_space() abort
     let col = col('.') - 1
     return !col || getline('.')[col - 1]  =~# '\s'
@@ -131,7 +132,7 @@ Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
     nmap <buffer> <silent> gd <Plug>(coc-definition)
     nmap <buffer> <silent> gr <Plug>(coc-references)
     nmap <buffer> <silent> <leader>rn <Plug>(coc-rename)
-    nmap <buffer> <silent> <leader>isort :Isort<CR>
+    " nmap <buffer> <silent> <leader>isort :Isort<CR>
     nnoremap <buffer> <silent> K :call <SID>show_documentation()<CR>
     nnoremap <buffer> <silent> <leader>coc  :<C-u>CocList<CR>
   endfun
@@ -141,8 +142,9 @@ Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
   augroup end
 
 Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
-  hi CurrentWord ctermbg=236
-  hi CurrentWordTwins ctermbg=237
+  " Color customizations are at the end of the file
+  " hi CurrentWord ctermbg=236
+  " hi CurrentWordTwins ctermbg=237
 
 " " Very well made python aware plugin, I'm using it for semantig highlight
 " Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
@@ -202,18 +204,26 @@ Plug 'universal-ctags/ctags'
 "   " Do not pollute projects with tag files, keep them all in one place.
 "   let g:gutentags_cache_dir = '~/.tags_dir'
 
-Plug 'majutsushi/tagbar'
-  let g:tagbar_autofocus = 1
-  nmap <F6> :TagbarToggle<CR>
+" Plug 'majutsushi/tagbar'
+"   let g:tagbar_autofocus = 1
+"   nmap <F6> :TagbarToggle<CR>
 
 " Organization
 Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
-  " https://github.com/vimwiki/vimwiki/issues/282#issuecomment-270471232
-  " Use unavailable mapping to remove the default ones
-  let g:vimwiki_map_prefix = '<F13>'
+  let g:vimwiki_key_mappings =
+    \ {
+    \   'all_maps': 0,
+    \   'global': 0,
+    \   'headers': 0,
+    \   'text_objs': 0,
+    \   'table_format': 0,
+    \   'table_mappings': 0,
+    \   'lists': 0,
+    \   'links': 0,
+    \   'html': 0,
+    \   'mouse': 0,
+    \ }  
   nmap <Leader>ww <Plug>VimwikiIndex
-  nmap <Leader>wd <Plug>VimwikiDeleteLink
-  nmap <Leader>wr <Plug>VimwikiRenameLink
   let g:vimwiki_global_ext=0 " Prevent creation of temporary wikis so that markdown file are not flagged vimwiki
   " let g:vimwiki_folding='expr'
   let g:vimwiki_folding='custom'
@@ -233,14 +243,16 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
             \ , 'ctagsbin':'/home/lapo/dotfiles/neovim/vwtags.py'
             \ , 'ctagsargs': 'markdown'
             \ }
-  let $VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
-  function! s:QuickNote ()
+  let g:VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
+  function! s:MyMakeNote()
+    " Create a new note with a unique name using the date + random string
     py from uuid import uuid4
     py from datetime import datetime
-    let l:id = pyeval("datetime.today().strftime('%Y%m%d%H%M') + uuid4().hex[:8]")
-    let l:path = $VIMWIKI_DIR . "/". l:id . ".md"
-    execute "e " . l:path
-    " execute "normal! inote\<C-R>=UltiSnips#ExpandSnippet()\<CR>i"
+    let l:id = pyeval("datetime.today().strftime('%Y_%m_%d_') + uuid4().hex[:8]") . ".md"
+    let l:path = g:VIMWIKI_DIR . "/". l:id
+    " return path and id because vimwiki links only need the id but opening
+    " files requires the path
+    return {"path" : l:path, "id" : l:id }
   endfunction
   function! s:GetVisualSelection()
     let [line_start, column_start] = getpos("'<")[1:2]
@@ -259,25 +271,75 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     let l:line = getline(l:line_num)
     call setline(l:line_num, substitute(l:line, '\('. a:title .'\)', '[\1]('. a:file .')', "g"))
   endfunction
-  function! s:AddNote ()
-    py from uuid import uuid4
-    py from datetime import datetime
-    let l:id = pyeval("datetime.today().strftime('%Y%m%d%H%M') + uuid4().hex[:8]")
-    let l:file = l:id . ".md"
+  function! s:AddNote(mode)
+    if  match(getline('.'),'\[.\+\](.\+)') >= 0
+      " extract filename from markdown link
+      let l:line = getline('.')
+      " extract groups
+      let l:parts = matchlist(l:line, '\[\([^\]]\+\)\](\(.\+\))')
+      " matchlist returns [fullmatch, group1, group2,...]
+      let l:file = l:parts[2]
+      " open link takes care of creating the file and allows for going back with backspace
+      call vimwiki#base#open_link("e",l:file)
+    else
+      " create new note and wraps the current word in a markdown link syntax
+      let l:path = s:MyMakeNote().id
+      if a:mode == 'v'
+        " Get visual selection to allow multiple words as link name
+        let l:name = s:GetVisualSelection()
+      else
+        " assume normal mode
+        let l:name = expand('<cWORD>')
+      endif
+      call s:MakeLink(l:name, l:path)
+    endif
+  endfunction
+  function! s:AddPrevious()
+    " wraps the current word in a markdown link to the alternate-file (<C-^>)
+    let l:path = expand('#:t')
     " Be carefull to call this function from visual mode
     let l:name = s:GetVisualSelection()
-    call s:MakeLink(l:name, l:file)
-    " open link takes care of creating the file and allows for going back with backspace
-    call vimwiki#base#open_link("e",l:file)
+    call s:MakeLink(l:name, l:path)
   endfunction
+  fun! GoVimwiki()
+    " autocmd InsertLeave <buffer> :update
+    autocmd BufEnter <buffer> setlocal signcolumn=no
+
+    " Link navigation mappings
+    nmap <buffer> <TAB> <Plug>VimwikiNextLink
+    nmap <buffer> <S-TAB> <Plug>VimwikiPrevLink
+    nmap <buffer> <BS> <Plug>VimwikiGoBackLink
+    " replaced by my link management functions
+    " nmap <buffer> <CR> <Plug>VimwikiFollowLink
+
+    " File management mappings
+    nmap <buffer> <leader>wd <Plug>VimwikiDeleteFile
+    nmap <buffer> <leader>wr <Plug>VimwikiRenameFile
+
+    " Custom mappings
+    " WikiBackward : Create link to alternate-file (<C-^>)
+    " Usage should be:
+    " 1. make new note with AddNote()
+    " 2. go to the file you want to add link to new note
+    " 3. use <leader>wp to make link
+    " simple version in normal mode that creates empty link
+    nnoremap <buffer> <leader>wb :put =\"[](\" . expand('#:t') . \")\"<CR>
+    " uses current word as name of the link to alternate-file
+    vnoremap <buffer> <leader>wb :call <SID>AddPrevious()<CR>
+    " WikiForward : Create link to new note
+    nmap <buffer> <CR> :call <SID>AddNote('n')<CR>
+    vmap <buffer> <CR> :call <SID>AddNote('v')<CR>
+    " WikiList : show the notes in chronological order and search tags
+    nnoremap <buffer> <leader>wl :Notes<CR>
+  endfun
   augroup vimwikicmds
-      autocmd FileType vimwiki
-          \ autocmd InsertLeave <buffer> :update
-      autocmd FileType vimwiki vmap <leader>no :call <SID>AddNote()<CR>
+    autocmd! vimwikicmds
+    autocmd FileType vimwiki :call GoVimwiki()
   augroup end
-  nmap <leader>no :call <SID>QuickNote()<CR>
+  nmap <leader>n :execute "e " . <SID>MyMakeNote()['path']<CR>
   " copy the current file name to use it in notes
-  nmap <leader>cpf :let @+ = expand("%:t")<CR>
+  " nmap <leader>cpf :let @+ = expand("%:t")<CR>
+  " easily create link to previous buffer
 
 " Plug 'itchyny/calendar.vim'
 
@@ -353,10 +415,12 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
   " To make our red modfied symbol work we update the statusline every time
   " there is a change. More info about the events in :help TextChanged
   augroup change_triggers
-    autocmd!
+    autocmd! change_triggers
     autocmd TextChanged,TextChangedI,BufWritePost,BufEnter * call lightline#update()
     autocmd User CocStatusChange call lightline#update()
     autocmd User CocDiagnosticChange call lightline#update()
+    " update the file whenever I switch to a new buffer or get back to nvim
+    autocmd FocusGained, BufEnter * checktime
   augroup END
   function! ModifiedFlag()
     " custom function that checks if the buffer has been modified
@@ -448,18 +512,12 @@ Plug 'junegunn/goyo.vim'
     set noshowmode
     set noshowcmd
     set scrolloff=999
-    " no idea why I need these but otherwise bg is not set... TODO FIND OUT WHY
-    set background=dark
-    " hide annoying ~ delimiting end of buffer
-    highlight EndOfBuffer ctermfg=bg ctermbg=bg
     " Limelight
   endfunction
   function! s:goyo_leave()
     set showmode
     set showcmd
     set scrolloff=4
-    " no idea why I need these but otherwise bg is not set... TODO FIND OUT WHY
-    set background=dark
     " hide annoying ~ delimiting end of buffer
     highlight EndOfBuffer ctermfg=bg ctermbg=bg
     " :call buftabline#update(0) not needed since I don't use buftabline
@@ -467,8 +525,6 @@ Plug 'junegunn/goyo.vim'
   endfunction
   autocmd! User GoyoEnter nested call <SID>goyo_enter()
   autocmd! User GoyoLeave nested call <SID>goyo_leave()
-  " autocmd! User GoyoEnter Limelight
-  " autocmd! User GoyoLeave Limelight!
   " nnoremap <leader>go :Goyo<CR>
 
 " highlight the area where writing and fade out the rest
@@ -513,10 +569,17 @@ Plug 'junegunn/fzf.vim'
     let reload_command = printf(command_fmt, '{q}')
     let path = GitAwarePath()
     echo path
-    let spec = {'options': ['--phony', '--query', a:query, '--bind', 'change:reload:'.reload_command],'dir':path}
+    let spec = {
+             \ 'options': [ '--phony', 
+                           \ '--query', a:query, 
+                           \ '--bind', 'change:reload:'.reload_command
+                        \ ],
+             \ 'dir':path
+             \ }
     call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
   endfunction
-  command! -nargs=* -bang Rg call RipgrepFzf(<q-args>, <bang>0) " Use RipGrep to search inside files
+  " Use RipGrep to search inside files
+  command! -nargs=* -bang Rg call RipgrepFzf(<q-args>, <bang>0) 
   " When fzf starts in a terminal buffer, the file type of the buffer is set to fzf. So you can set up FileType fzf autocmd to
   " customize the settings of the window.For example, if you use the default layout ({'down': '~40%'}) on Neovim, you might
   " want to temporarily disable the statusline for a cleaner look.
@@ -534,12 +597,68 @@ Plug 'junegunn/fzf.vim'
     return fzf#run({'source': suggestions, 'sink': function("FzfSpellSink"), 'down': 10 })
   endfunction
   nnoremap z= :call FzfSpell()<CR>
-  nnoremap <leader>f :Files<CR>
-  nnoremap <leader>b :Buffers<CR>
-  nnoremap <leader>l :Lines<CR>
+  nnoremap <leader>ff :Files<CR>
+  nnoremap <leader>fb :Buffers<CR>
+  nnoremap <leader>fl :Lines<CR>
   " rg -> ripgrep , rw -> ripgrep current word
-  nnoremap <leader>rg :Rg<CR>
-  nnoremap <leader>rw :Rg <C-R><C-W><CR>
+  nnoremap <leader>fg :Rg<CR>
+  nnoremap <leader>fw :Rg <C-R><C-W><CR>
+  " command! -bang Notes call fzf#vim#files(g:VIMWIKI_DIR, <bang>0)
+  " command! -bang -nargs=? -complete=dir Notes
+  "   \ call fzf#vim#files(g:VIMWIKI_DIR, fzf#vim#with_preview({'options': ['--layout=reverse', '--info=inline']}), <bang>0)
+  command! -bang -nargs=* Notes
+  \ call fzf#vim#grep(
+  \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -- '.shellescape('tags:'), 1,
+  \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
+
+Plug 'liuchengxu/vim-which-key'
+  set timeout
+  set timeoutlen=500
+  " added two spaces because the vsplit was cutting the last 2 chars
+  let g:which_key_map = {
+        \ '-' : 'Close buffer  ',
+        \ '=' : 'Open scratchpad  ',
+        \ 'c' : 'Open init.vim  ',
+        \ 'd' : 'Put date Y-m-d  ',
+        \ 'e' : 'Exec curr line as bash  ',
+        \ 'l' : 'Dictionary lookup  ',
+        \ 'm' : 'Toggle md preview  ',
+        \ 'n' : 'Create new note  ',
+        \ 'p' : '<C-^>  ',
+        \ 'q' : 'Quit  ',
+        \ 's' : 'Save  ',
+        \ }
+  let g:which_key_map.w = {
+        \ 'name' : '+vimwiki  ',
+        \ 'b' : 'Backward link  ',
+        \ 'd' : 'Delete file  ',
+        \ 'f' : 'Forward link 2 new note  ',
+        \ 'l' : 'List notes, search tags  ',
+        \ 'r' : 'Rename file  ',
+        \ 'w' : 'Open index  ',
+        \ }
+  let g:which_key_map.f = {
+        \ 'name' : '+fzf  ',
+        \ 'b' : 'Buffers  ',
+        \ 'f' : 'Files  ',
+        \ 'g' : 'RipGrep  ',
+        \ 'l' : 'Lines  ',
+        \ 'w' : 'RipGrep curr word  ',
+        \ }
+  " the horiz floating bar is an ugly grey wall
+  " the keys are also too spaced out to scan easily
+  " Using a separate vertical stplit is much better
+  let g:which_key_vertical = 1
+  let g:which_key_use_floating_win = 0
+  let g:which_key_position = 'topleft'
+  autocmd! FileType which_key
+  autocmd  FileType which_key set laststatus=0 noshowmode noruler
+    \| autocmd BufLeave <buffer> set laststatus=2 showmode ruler
+  nnoremap <silent> <leader> :<c-u>WhichKey '<Space>'<CR>
+  " vnoremap <silent> <leader> :<c-u>WhichKeyVisual '<Space>'<CR>
+  " ADD register afte the Plug end
+  " call which_key#register('<Space>', "g:which_key_map")
+
 
 Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
 
@@ -618,10 +737,16 @@ Plug 'tpope/vim-repeat'          " Allows repeating some plugins operations usin
 "     " info
 "     normal! `>j
 "   endfunction
-"   nnoremap <leader>t :call IPythonLoadCurrentLine()<CR>
-"   vnoremap <leader>t "+y<CR>:call IPythonLoadCurrentVisualSelection()<CR>
-"   nnoremap <leader>T :call IPythonLoadCurrentFile()<CR>
-"   tnoremap <ESC> <C-\><C-n>
+"   fun! GoNeoterm()
+"     nnoremap <buffer> <leader>t :call IPythonLoadCurrentLine()<CR>
+"     vnoremap <buffer> <leader>t "+y<CR>:call IPythonLoadCurrentVisualSelection()<CR>
+"     nnoremap <buffer> <leader>T :call IPythonLoadCurrentFile()<CR>
+"     tnoremap <ESC> <C-\><C-n>
+"   endfun
+"   augroup neotermcmds
+"     autocmd! neotermcmds
+"     autocmd FileType python :call GoNeoterm()
+"   augroup end
 
 Plug 'SirVer/ultisnips'          " custom snippets
   " Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
@@ -632,6 +757,8 @@ Plug 'SirVer/ultisnips'          " custom snippets
 
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
+
+call which_key#register('<Space>', "g:which_key_map")
 
 " }}}
 " ============================================================================
@@ -693,15 +820,16 @@ set smartcase                          " ...unless we type a capital
 set history=1000                       " Remember more commands and search history
 set undolevels=1000                    " Use many muchos levels of undo
 set mouse=a                            " Enable use of the mouse for all modes
-set notimeout ttimeout ttimeoutlen=200 " Quickly time out on keycodes, but never time out on mappings
+" set notimeout ttimeout ttimeoutlen=200 " Quickly time out on keycodes, but never time out on mappings
 set completeopt=longest,menuone,noselect,noinsert,preview " show popup menu when at least one match but don't insert stuff
 set complete=.,w,b,u,t,kspell        " Check file -> window -> buffer -> hidden buffers -> tags -> spelling if enabled
 set omnifunc=syntaxcomplete#Complete " On <c-x><c-o> use the file syntax to guess possible completions
 set autoread                           " Reload files changed outside vim
 set lazyredraw                         " Don't redraw while executing macros (good performance setting)
 set linebreak                          " Stop annoying 80 chars line wrapping
-" set textwidth=500                      "
 set scrolloff=4
+set foldlevel=99
+set signcolumn=yes                     " Show the gutter for git info, errors... 
 
 " Search down into subfolders
 " Provides tab-completion for all file-related tasks
@@ -785,24 +913,27 @@ nnoremap <Leader>q :q<CR>
 " execute current line in shell and paste results under it
 " nmap <leader>e :exec 'r!'.getline('..')<CR>
 " execute current line in shell and paste results above it
-nnoremap <leader>ex !!bash<CR>
+" nnoremap <leader>ex !!bash<CR>
+nnoremap <leader>e !!bash<CR>
 " easily open and source neovim config file
-nnoremap <leader>conf :e $MYVIMRC<CR>
+" nnoremap <leader>conf :e $MYVIMRC<CR>
+nnoremap <leader>c :e $MYVIMRC<CR>
 " alternate between current file and previous file
 nnoremap <leader>p <C-^> 
 " insert date
-nnoremap <leader>date :put =strftime('%Y-%m-%d')<CR>
+" nnoremap <leader>date :put =strftime('%Y-%m-%d')<CR>
+nnoremap <leader>d :put =strftime('%Y-%m-%d')<CR>
 " Switch CWD to the directory of the open buffer
-nnoremap <leader>cd :cd %:p:h<cr>:pwd<cr>
+" nnoremap <leader>cd :cd %:p:h<cr>:pwd<cr>
 " Take quick notes, with = so that is close to buffer close
 nnoremap <leader>= :e ~/buffer.md<CR>
 nnoremap <leader>- :bd<Cr>
-" Easier mapping to toggle fold
-nnoremap <leader>0 za
-nnoremap <leader>wc :echo wordcount()["words"]<CR>
+" nnoremap <leader>wc :echo wordcount()["words"]<CR>
 " Type a replacement term and press . to repeat the replacement again. Useful
 " for replacing a few instances of the term (comparable to multiple cursors)
 nnoremap <silent> s* :let @/='\<'.expand('<cword>').'\>'<CR>cgn
+" Dictionary lookup
+nnoremap <leader>l :execute "!xdg-open https://www.merriam-webster.com/dictionary/" . expand('<cword>')<CR>
 
 " Delete trailing white space on save, useful for some filetypes ;)
 fun! CleanExtraSpaces()
@@ -820,9 +951,11 @@ function! EchoWarning(msg)
 endfunction
 
 augroup vimrccmds     " Source vim configuration upon save
-    autocmd! BufWritePost $MYVIMRC nested so % | call EchoWarning("Reloaded " . $MYVIMRC) | redraw
-    autocmd! BufWritePre *.txt,*.js,*.py,*.wiki,*.sh,*.coffee :call CleanExtraSpaces()
+    autocmd! vimrccmds
+    autocmd BufWritePost $MYVIMRC nested so % | call EchoWarning("Reloaded " . $MYVIMRC) | redraw
+    autocmd BufWritePre *.txt,*.js,*.py,*.wiki,*.sh,*.coffee :call CleanExtraSpaces()
 augroup END
+
 
 " Easier split navigation
 nnoremap <C-J> <C-W><C-J>
@@ -852,11 +985,15 @@ map 0 ^
 " ============================================================================
 " At the bottom to override themes and shit
 
+" make the current word highlighting less of a punch in the eye
 hi CurrentWord ctermbg=236
+hi CurrentWordTwins ctermbg=236
+" Give VimWiki links a nice light blue colors
 hi VimwikiLink ctermfg=39 cterm=underline
 " Use terminal background color to customize (no more trying to match both
 " because of vim's uneven borders)
-hi Normal guibg=NONE ctermbg=NONE
+" hi Normal guibg=NONE ctermbg=NONE
+hi EndOfBuffer ctermfg=bg ctermbg=bg
 
 " }}}
 " ============================================================================

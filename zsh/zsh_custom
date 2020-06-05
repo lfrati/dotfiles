@@ -36,6 +36,10 @@ bindkey -s '^o' 'ranger\n'
 autoload edit-command-line; zle -N edit-command-line
 bindkey '^e' edit-command-line
 
+prettyjson(){
+  cat $1 | python -mjson.tool > pretty-$1
+}
+
 toteton(){
 
   src_dir=$PWD

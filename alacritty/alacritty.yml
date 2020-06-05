@@ -110,11 +110,14 @@ font:
     #
     # If the bold family is not specified, it will fall back to the
     # value specified for the normal font.
-    #family: monospace
-    family: CascadiaCode Nerd Font Mono
+    # family: SauceCodePro Nerd Font Mono
+    family: SauceCodePro Nerd Font Mono
+    # family: Ubuntu Mono
+    # family: CascadiaCode Nerd Font Mono
 
     # The `style` can be specified to pick a specific face.
     style: Bold
+
 
   # Italic font face
   italic:
@@ -122,8 +125,9 @@ font:
     #
     # If the italic family is not specified, it will fall back to the
     # value specified for the normal font.
-    #family: monospace
-    family: CascadiaCode Nerd Font Mono
+    family: SauceCodePro Nerd Font Mono
+    # family: Ubuntu Mono
+    # family: CascadiaCode Nerd Font Mono
 
     # The `style` can be specified to pick a specific face.
     style: Italic
@@ -134,8 +138,9 @@ font:
     #
     # If the bold italic family is not specified, it will fall back to the
     # value specified for the normal font.
-    #family: monospace
-    family: CascadiaCode Nerd Font Mono
+    family: SauceCodePro Nerd Font Mono
+    # family: Ubuntu Mono
+    # family: CascadiaCode Nerd Font Mono
 
     # The `style` can be specified to pick a specific face.
     style: Bold Italic
@@ -192,7 +197,7 @@ colors:
     # green:   '#98c379' too washed out
     green:   '#00cd00'
     yellow:  '#d19a66'
-    blue:    '#5c6cff'
+    blue:    '#5c8cff'
     magenta: '#c678dd'
     cyan:    '#56b6c2'
     white:   '#abb2bf'

@@ -12,6 +12,23 @@
 set $mod Mod1
 set $super Mod4
 
+
+# 4.29. Focus on window activation
+# If a window is activated, e.g., via google-chrome www.google.com, it may request to take focus. Since this may not preferable, different reactions can be configured.
+# Note that this may not affect windows that are being opened. To prevent new windows from being focused, see [no_focus].
+# Syntax:
+# focus_on_window_activation smart|urgent|focus|none
+# The different modes will act as follows:
+# smart
+#     This is the default behavior. If the window requesting focus is on an active workspace, it will receive the focus. Otherwise, the urgency hint will be set.
+# urgent
+#     The window will always be marked urgent, but the focus will not be stolen.
+# focus
+#     The window will always be focused and not be marked urgent.
+# none
+#     The window will neither be focused, nor be marked urgent.
+focus_on_window_activation focus
+
 # Font for window titles. Will also be used by the bar unless a different font
 # is used in the bar {} block below.
 font pango:monospace 8

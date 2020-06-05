@@ -20,7 +20,7 @@ snippet note "A quick note with date and tags" b
 tags: $1`!p opts=get_vimwiki_tags()
 snip.rv=complete(t[1].split(" ")[-1], opts)`
 title: $2
-date: `date +"%Y-%m-%d %H:%M"`
+date: `date --iso-8601=seconds`
 id: `!p snip.rv = snip.basename`
 ---
 

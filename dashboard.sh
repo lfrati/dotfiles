@@ -27,18 +27,14 @@ if [ $? != 0 ]; then
   tmux splitw -h -p 32
 
   # Pane 3
-  # Taskwarrior pane
-  tmux splitw -v -p 55
+  # Split for small CPU info
+  tmux splitw -v -p 5
 
   # Pane 4
-  # Split for small CPU info
-  tmux splitw -v -p 25
-
-  # Pane 5
   # Make thin bottom pane for music
   tmux splitw -f -v -p 5
 
-  # Pane 6
+  # Pane 5
   tmux splitw -h
 
   # Assign tasks to each pane
@@ -49,12 +45,9 @@ if [ $? != 0 ]; then
   tmux send-keys "watch --no-title -n 5 nvidia-smi" C-m
 
   tmux selectp -t 3
-  tmux send-keys "while true; do clear && task next limit:3; sleep 3; done" C-m
+  tmux send-keys "watch --no-title -n 5 \" sensors -A k10temp-pci-00c3 | grep Tdie | sed -E 's/Tdie: +/CPU temp: /'\"" C-m
 
   tmux selectp -t 4
-  tmux send-keys "watch --no-title -n 5 \"sensors -A k10temp-pci-00c3 | grep Tdie | sed -E 's/Tdie: +/CPU temp: /'\"" C-m
-
-  tmux selectp -t 5
   tmux send-keys "ncmpcpp" C-m
 
 
