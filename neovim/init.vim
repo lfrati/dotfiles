@@ -414,19 +414,6 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
 
 " Zen mode
 Plug 'junegunn/goyo.vim'
-  function Get_color(group, attr)
-    " https://github.com/junegunn/goyo.vim/blob/6b6ed2734084fdbb6315357ddcaecf9c8e6f143d/autoload/goyo.vim#L31
-    return synIDattr(synIDtrans(hlID(a:group)), a:attr)
-  endfunction
-  " let bg = s:get_color('Normal', 'bg#')
-  function! ReturnHighlightTerm(group, term)
-    " https://github.com/junegunn/goyo.vim/blob/6b6ed2734084fdbb6315357ddcaecf9c8e6f143d/autoload/goyo.vim#L31
-    " Store output of group to variable
-    let output = execute('hi ' . a:group)
-    " Find the term we're looking for
-    return matchstr(output, a:term.'=\zs\S*')
-  endfunction
-  " let b = ReturnHighlightTerm('StatusLine', 'ctermbg')
   function! s:goyo_enter()
     set noshowmode
     set noshowcmd
@@ -437,8 +424,6 @@ Plug 'junegunn/goyo.vim'
     set showmode
     set showcmd
     set scrolloff=4
-    " hide annoying ~ delimiting end of buffer
-    highlight EndOfBuffer ctermfg=bg ctermbg=bg
     " :call buftabline#update(0) not needed since I don't use buftabline
     " Limelight!
   endfunction
@@ -638,19 +623,11 @@ call which_key#register('<Space>', "g:which_key_map")
 
 " }}}
 " ============================================================================
-" UI Layout {{{
-" ============================================================================
-
-colorscheme onedark
-set encoding=utf8
-set background=dark " Because dark is cool
-
-" }}}
-" ============================================================================
 " Basic settings {{{
 " ============================================================================
 
 syntax on                              " Enable syntax highlighting
+set encoding=utf8
 set smarttab                           " Be smart when using tabs ;)
 set expandtab                          " Replace tabs with spaces
 set shiftwidth=2                       " 1 tab == 2 spaces
@@ -837,15 +814,23 @@ map 0 ^
 " ============================================================================
 " At the bottom to override themes and shit
 
-" make the current word highlighting less of a punch in the eye
-hi CurrentWord ctermbg=236
-hi CurrentWordTwins ctermbg=236
-" Give VimWiki links a nice light blue colors
-hi VimwikiLink ctermfg=39 cterm=underline
-" Use terminal background color to customize (no more trying to match both
-" because of vim's uneven borders)
-" hi Normal guibg=NONE ctermbg=NONE
-hi EndOfBuffer ctermfg=bg ctermbg=bg
+" from https://github.com/junegunn/goyo.vim/issues/84#issuecomment-156299446
+function s:PatchColors()
+  " make the current word highlighting less of a punch in the eye
+  hi CurrentWord ctermbg=236
+  hi CurrentWordTwins ctermbg=236
+  " Give VimWiki links a nice light blue colors
+  hi VimwikiLink ctermfg=39 cterm=underline
+  " Use terminal background color to customize (no more trying to match both
+  " because of vim's uneven borders)
+  " hi Normal guibg=NONE ctermbg=NONE
+  " Hide the annoying ~ at the end of files
+  hi EndOfBuffer ctermfg=bg ctermbg=bg
+endfunction
+
+autocmd! ColorScheme onedark call s:PatchColors()
+colorscheme onedark
+set background=dark " Because dark is cool
 
 " }}}
 " ============================================================================
