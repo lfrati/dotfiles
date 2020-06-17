@@ -1,7 +1,7 @@
 ! ========== VARIOUS ==========
 URxvt*scrollBar:                      false
-URxvt*font:                           	xft:CascadiaCode Nerd Font Mono:size=12:style=Regular
-/* URxvt*font:                           	xft:UbuntuMono Nerd Font Mono:size=12:style=Regular */
+/* URxvt*font:                           	xft:CascadiaCode Nerd Font Mono:size=11:style=Regular */
+URxvt*font:                           	xft:UbuntuMono Nerd Font Mono:size=12:style=Regular
 
 ! ========== EXTENSIONS ==========
 URxvt.perl-ext-common:      default,clipboard,url-select,keyboard-select

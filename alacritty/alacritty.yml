@@ -99,7 +99,8 @@ font:
     #   - (Linux/BSD) monospace
     #   - (Windows) Consolas
     # family: monospace 
-    family: CascadiaCode Nerd Font Mono
+    # family: CascadiaCode Nerd Font Mono
+    family: Ubuntu Mono
 
     # The `style` can be specified to pick a specific face.
     style: Regular
@@ -111,10 +112,7 @@ font:
     # If the bold family is not specified, it will fall back to the
     # value specified for the normal font.
     # family: SauceCodePro Nerd Font Mono
-    family: SauceCodePro Nerd Font Mono
-    # family: Ubuntu Mono
-    # family: CascadiaCode Nerd Font Mono
-
+    family: Ubuntu Mono
     # The `style` can be specified to pick a specific face.
     style: Bold
 
@@ -125,9 +123,8 @@ font:
     #
     # If the italic family is not specified, it will fall back to the
     # value specified for the normal font.
-    family: SauceCodePro Nerd Font Mono
-    # family: Ubuntu Mono
-    # family: CascadiaCode Nerd Font Mono
+    # family: SauceCodePro Nerd Font Mono
+    family: Ubuntu Mono
 
     # The `style` can be specified to pick a specific face.
     style: Italic
@@ -138,20 +135,19 @@ font:
     #
     # If the bold italic family is not specified, it will fall back to the
     # value specified for the normal font.
-    family: SauceCodePro Nerd Font Mono
-    # family: Ubuntu Mono
-    # family: CascadiaCode Nerd Font Mono
+    # family: SauceCodePro Nerd Font Mono
+    family: Ubuntu Mono
 
     # The `style` can be specified to pick a specific face.
     style: Bold Italic
 
   # Point size
-  size: 11.0
+  size: 12
 
   # Offset is the extra space around each character. `offset.y` can be thought of
   # as modifying the line spacing, and `offset.x` as modifying the letter spacing.
   # offset:
-  #   x: 0
+  #   x: 1
   #   y: 0
 
   # Glyph offset determines the locations of the glyphs within their cells with
@@ -193,13 +189,12 @@ colors:
     # NOTE: Use '#131613' for the `black` color if you'd like to see
     # black text on the background.
     black:   '#282c34'
-    red:     '#e06c75'
-    # green:   '#98c379' too washed out
+    red:     '#e03c65'
     green:   '#00cd00'
-    yellow:  '#d19a66'
+    yellow:  '#f19a66'
     blue:    '#5c8cff'
-    magenta: '#c678dd'
-    cyan:    '#56b6c2'
+    magenta: '#b678dd'
+    cyan:    '#16b6c2'
     white:   '#abb2bf'
 
   # Bright colors
@@ -207,7 +202,7 @@ colors:
     black:   '#5c6370'
     red:     '#e06c75'
     green:   '#98c379'
-    yellow:  '#d19a66'
+    yellow:  '#d19a46'
     blue:    '#61afef'
     magenta: '#c678dd'
     cyan:    '#56b6c2'
