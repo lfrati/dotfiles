@@ -27,6 +27,7 @@ sunmap <Space>
 let mapleader=' '
 let maplocalleader=' '
 
+
 " }}}
 " ============================================================================
 " Plugins {{{
@@ -38,6 +39,11 @@ filetype plugin on
 syntax on
 
 call plug#begin('~/.vim/plugged')
+
+" Plug 'ndmitchell/ghcid', { 'rtp': 'plugins/nvim' }
+Plug 'neovimhaskell/haskell-vim'
+
+Plug 'JuliaEditorSupport/julia-vim'
 
 " Suggested by vim-markdown
 Plug 'godlygeek/tabular'
@@ -74,19 +80,6 @@ Plug 'plasticboy/vim-markdown'
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
   " nmap <leader>md <Plug>MarkdownPreviewToggle
   nmap <leader>m <Plug>MarkdownPreviewToggle
-
-Plug 'terryma/vim-multiple-cursors' " <C-n> for easy multi-cursor edit
-  " If set to 0, insert mappings won't be supported in Insert mode anymore.
-  " (default : 1)
-  let g:multiple_cursors_support_imap = 0
-  " If set to 1, then pressing g:multi_cursor_quit_key in Visual mode will
-  " quit and delete all existing cursors, just skipping normal mode with
-  " multiple cursors.  (default : 0)
-  let g:multi_cursor_exit_from_visual_mode = 1
-  " If set to 1, then pressing g:multi_cursor_quit_key in Insert mode will
-  " quit and delete all existing cursors, just skipping normal mode with
-  " multiple cursors.  (default : 0)
-  let g:multi_cursor_exit_from_insert_mode = 1
 
 Plug 'airblade/vim-gitgutter'
   let g:gitgutter_map_keys = 0 
@@ -141,7 +134,7 @@ Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
   endfun
   augroup cocbindings
     autocmd! cocbindings
-    autocmd Filetype python,javascript :call GoCoc()
+    autocmd Filetype json,python,javascript :call GoCoc()
   augroup end
 
 Plug 'SirVer/ultisnips'              " Custom snippets
@@ -187,17 +180,8 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
             \ , 'ctagsargs': 'markdown'
             \ }
   let g:VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
-  function! s:MyMakeNote()
-    " Create a new note with a unique name using the date + random string
-    py from uuid import uuid4
-    py from datetime import datetime
-    let l:id = pyeval("datetime.today().strftime('%Y_%m_%d_') + uuid4().hex[:8]") . ".md"
-    let l:path = g:VIMWIKI_DIR . "/". l:id
-    " return path and id because vimwiki links only need the id but opening
-    " files requires the path
-    return {"path" : l:path, "id" : l:id }
-  endfunction
   function! s:GetVisualSelection()
+    " I think you can guess what this one does
     let [line_start, column_start] = getpos("'<")[1:2]
     let [line_end, column_end] = getpos("'>")[1:2]
     let lines = getline(line_start, line_end)
@@ -208,41 +192,108 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     let lines[0] = lines[0][column_start - 1:]
     return join(lines, "\n")
   endfunction
-  function! s:MakeLink(title, file)
-    " use replace to turn the selection into a markdown link [a:title](a:file)
-    let l:line_num = line(".")
-    let l:line = getline(l:line_num)
-    call setline(l:line_num, substitute(l:line, '\('. a:title .'\)', '[\1]('. a:file .')', "g"))
+  function! s:MakeZettleNote()
+    " Create a new note with a unique name using the date + random string
+    py from uuid import uuid4
+    py from datetime import datetime
+    let l:id = pyeval("datetime.today().strftime('%Y_%m_%d_') + uuid4().hex[:8]") . ".md"
+    let l:path = g:VIMWIKI_DIR . "/". l:id
+    " return path and id because vimwiki links only need the id but opening
+    " files requires the path
+    return {"path" : l:path, "id" : l:id }
   endfunction
-  function! s:AddNote(mode)
-    if  match(getline('.'),'\[.\+\](.\+)') >= 0
-      " extract filename from markdown link
-      let l:line = getline('.')
-      " extract groups
-      let l:parts = matchlist(l:line, '\[\([^\]]\+\)\](\(.\+\))')
+  function! s:MakeLink(name, path)
+    " Use replace to insert a markdown link [a:title](a:file) in the current line.
+    " Don't use bunch of spaces or empty lines as links
+    if a:name != '' && a:name !~? '^\s\+$'
+      let l:pos = GetUnderCursor(a:name)
+      call s:ReplaceCoords('['.a:name.']('.a:path.')',l:pos)
+    else
+      echo "Select something to make a link."
+    endif
+  endfunction
+  function! s:LinkHandler()
+    let l:word = expand('<cWORD>')
+    " URL
+    let l:match = matchlist(l:word ,'https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\-\?\=]\+')
+    if len(l:match) > 0
+      let l:url = l:match[0]
+      echo l:url 
+      call system('xdg-open ' . shellescape(l:url).' &')
+      return
+    endif
+    " markdown image ![]()
+    let l:match = matchlist(l:word ,'\![.\+\](\(.\+\))')
+    if len(l:match) > 0
+      let l:img = g:VIMWIKI_DIR . '/' . l:match[1]
+      echo l:img 
+      call system('xdg-open ' . shellescape(l:img) . ' &')
+      return
+    endif
+    " markdown link []()
+    let match_link = GetUnderCursor('\[.\+\](.\+)')
+    " If current line contains a link follow it 
+    if  match_link.start >= 0
+      " extract groups -> link_name and file_name
+      let l:parts = matchlist(match_link.match, '\[\([^\]]\+\)\](\(.\+\))')
       " matchlist returns [fullmatch, group1, group2,...]
       let l:file = l:parts[2]
       " open link takes care of creating the file and allows for going back with backspace
       call vimwiki#base#open_link("e",l:file)
-    else
-      " create new note and wraps the current word in a markdown link syntax
-      let l:path = s:MyMakeNote().id
-      if a:mode == 'v'
-        " Get visual selection to allow multiple words as link name
-        let l:name = s:GetVisualSelection()
-      else
-        " assume normal mode
-        let l:name = expand('<cWORD>')
-      endif
-      call s:MakeLink(l:name, l:path)
-    endif
+      return
+    endif 
+    " None of the above, so create link
+    call s:AddForward()
   endfunction
-  function! s:AddPrevious()
-    " wraps the current word in a markdown link to the alternate-file (<C-^>)
-    let l:path = expand('#:t')
-    " Be carefull to call this function from visual mode
-    let l:name = s:GetVisualSelection()
+  function! s:AddForward()
+    let l:name = expand('<cWORD>')
+    " create new note and wraps the current word in a markdown link syntax
+    let l:path = s:MakeZettleNote().id
     call s:MakeLink(l:name, l:path)
+  endfunction
+  function! s:AddBackward()
+    " Create link to alternate-file
+    let l:path = expand('#:t')
+    let l:name = expand('<cWORD>')
+    call s:MakeLink(l:name, l:path)
+  endfunction
+  " function! ChangeWordUnderCursor(from, to)
+  "   let pos = GetUnderCursor(a:from)
+  "   call ReplaceCoords(a:to, pos)
+  " endfunction
+  function! s:GetUnderCursor(pattern)
+  " Return the match under the cursor. Yeah, it's a pain
+    let col = col('.') - 1
+    let line = getline('.')
+    let found = ''
+    let ebeg = -1
+    let elen = 0
+    " match( ..., 0) return col of first match
+    let cont = match(line, a:pattern, 0)
+    " search until the cursor is within the match
+    while (ebeg >= 0 || (0 <= cont) && (cont <= col))
+      let contn = matchend(line, a:pattern, cont)
+      if (cont <= col) && (col < contn)
+        let ebeg = match(line, a:pattern, cont)
+        let elen = contn - ebeg
+        let found = strpart(line, ebeg, elen)
+        break
+      else
+        let cont = match(line, a:pattern, contn)
+        let found = ''
+      endif
+    endwh
+    return {'match' : found, 'start' : ebeg, 'len' : elen}
+  endfunction
+  function! s:ReplaceCoords(insert, pos)
+  " Replaces the text between pos.start and pos.start + pos.len with insert
+    if a:pos.start >= 0
+      let line = getline('.')
+      let from = a:pos.start
+      let to = a:pos.start + a:pos.len
+      let newline = strpart(line, 0, from).a:insert.strpart(line, to)
+      call setline(line('.'), newline)
+    endif
   endfunction
   fun! GoVimwiki()
     " autocmd InsertLeave <buffer> :update
@@ -256,19 +307,8 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " File management mappings
     nmap <buffer> <leader>wd <Plug>VimwikiDeleteFile
     nmap <buffer> <leader>wr <Plug>VimwikiRenameFile
-    " Custom mappings
-    " WikiBackward : Create link to alternate-file (<C-^>)
-    " Usage should be:
-    " 1. make new note with AddNote()
-    " 2. go to the file you want to add link to new note
-    " 3. use <leader>wp to make link
-    " simple version in normal mode that creates empty link
-    nnoremap <buffer> <leader>wb :put =\"[](\" . expand('#:t') . \")\"<CR>
-    " uses current word as name of the link to alternate-file
-    vnoremap <buffer> <leader>wb :call <SID>AddPrevious()<CR>
-    " WikiForward : Create link to new note
-    nmap <buffer> <CR> :call <SID>AddNote('n')<CR>
-    vmap <buffer> <CR> :call <SID>AddNote('v')<CR>
+    nmap <buffer> <leader>wb :call <SID>AddBackward()<CR>
+    nmap <buffer> <CR> :call <SID>LinkHandler()<CR>
     " WikiList : show the notes in chronological order and search tags
     nnoremap <buffer> <leader>wl :Notes<CR>
   endfun
@@ -276,7 +316,8 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     autocmd! vimwikicmds
     autocmd FileType vimwiki :call GoVimwiki()
   augroup end
-  nmap <leader>n :execute "e " . <SID>MyMakeNote()['path']<CR>
+  nmap <leader>n :execute "e " . <SID>MakeZettleNote()['path']<CR>
+  "\<CR>
   " copy the current file name to use it in notes
   " nmap <leader>cpf :let @+ = expand("%:t")<CR>
   " easily create link to previous buffer
@@ -339,7 +380,10 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     autocmd User CocStatusChange call lightline#update()
     autocmd User CocDiagnosticChange call lightline#update()
     " update the file whenever I switch to a new buffer or get back to nvim
-    autocmd FocusGained, BufEnter * checktime
+    autocmd FocusGained * checktime
+    autocmd BufEnter * checktime
+    " autocmd FocusGained * echo 'FOCUS'
+    " autocmd BufEnter * echo 'BUFF'
   augroup END
   function! ModifiedFlag()
     " custom function that checks if the buffer has been modified
@@ -471,7 +515,8 @@ Plug 'junegunn/fzf.vim'
   endfunction
   function! RipgrepFzf(query, fullscreen)
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
-    let command_fmt = 'rg --column --line-number --no-heading --color=always --smart-case %s || true'
+    " line-number is needed for the preview
+    let command_fmt = 'rg --line-number --no-heading --color=always --smart-case %s || true'
     let initial_command = printf(command_fmt, shellescape(a:query))
     let reload_command = printf(command_fmt, '{q}')
     let path = GitAwarePath()
@@ -509,7 +554,7 @@ Plug 'junegunn/fzf.vim'
   nnoremap <leader>fl :Lines<CR>
   nnoremap <leader>fg :Rg<CR>
   nnoremap <leader>fw :Rg <C-R><C-W><CR>
-  " Notes is part of the vimwiki mappings
+  " Notes is part of the vimwiki mappings <leader>wl
   command! -bang -nargs=* Notes
   \ call fzf#vim#grep(
   \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -- '.shellescape('tags:'), 1,
@@ -525,6 +570,7 @@ Plug 'liuchengxu/vim-which-key'
         \ 'c' : 'Open init.vim  ',
         \ 'd' : 'Put date Y-m-d  ',
         \ 'e' : 'Exec curr line as bash  ',
+        \ 'g' : 'Get line  ',
         \ 'l' : 'Dictionary lookup  ',
         \ 'm' : 'Toggle md preview  ',
         \ 'n' : 'Create new note  ',
@@ -536,7 +582,7 @@ Plug 'liuchengxu/vim-which-key'
         \ 'name' : '+vimwiki  ',
         \ 'b' : 'Backward link  ',
         \ 'd' : 'Delete file  ',
-        \ 'f' : 'Forward link 2 new note  ',
+        \ 'f' : 'Forward link to new note  ',
         \ 'l' : 'List notes, search tags  ',
         \ 'r' : 'Rename file  ',
         \ 'w' : 'Open index  ',
@@ -586,6 +632,7 @@ Plug 'mbbill/undotree'           " More easily navigate vim's poweful undo tree
       set backupdir=~/.local/share/nvim/backupdir// " Don't put backups in current dir
       set backup
       set directory=~/.local/share/nvim/swapdir//
+      set noswapfile
   endif
   nnoremap <F5> :UndotreeToggle<cr>
   if !exists("*Undotree_CustomMap")
@@ -729,6 +776,15 @@ let g:python_host_prog="/home/lapo/miniconda3/envs/neovim2/bin/python"
 " Mappings {{{
 " ============================================================================
 
+function! s:QuickGetLine(off)
+  redraw
+  let l:start = line('.')
+  " Get the line with offset a:off (works for negative values)
+  let l:line = getline(l:start + str2nr(a:off))
+  " Insert that line below the cursor
+  put =l:line
+endfunction
+nnoremap <leader>g :call <SID>QuickGetLine(input('Line to copy: '))<CR>
 " Use capital W as a shortcut to save and quit
 " nnoremap W :w<CR>
 " nnoremap Q :q<CR>
