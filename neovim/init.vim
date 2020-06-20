@@ -148,13 +148,12 @@ Plug 'SirVer/ultisnips'              " Custom snippets
 Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   let g:vimwiki_key_mappings =
     \ {
-    \   'all_maps': 0,
     \   'global': 0,
     \   'headers': 0,
     \   'text_objs': 0,
     \   'table_format': 0,
     \   'table_mappings': 0,
-    \   'lists': 0,
+    \   'lists': 1,
     \   'links': 0,
     \   'html': 0,
     \   'mouse': 0,
@@ -202,11 +201,29 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " files requires the path
     return {"path" : l:path, "id" : l:id }
   endfunction
+  function! s:MyPastePNG()
+  " If there is an img in the clipboard save it to
+  " VIMWIKI_DIR/assets/filename_rndmst and insert an image link
+    py from uuid import uuid4
+    let l:avail = system('xclip -selection clipboard -t TARGETS -o')
+    if l:avail =~ 'image/png'
+      let l:file = expand('%:t:r')
+      let l:id = pyeval("uuid4().hex[:5]")
+      let l:link = "assets/" . l:file . '_' . l:id . '.png'
+      let l:path = g:VIMWIKI_DIR . '/' . l:link
+      call system('xclip -selection clipboard -t image/png -o > ' . l:path)
+      echo "Image saved to " . l:path
+      let l:img_link = '![img]('.l:link . ')'
+      put =l:img_link
+    else
+      echo "No image found in clipboard."
+    endif
+  endfunction
   function! s:MakeLink(name, path)
     " Use replace to insert a markdown link [a:title](a:file) in the current line.
     " Don't use bunch of spaces or empty lines as links
     if a:name != '' && a:name !~? '^\s\+$'
-      let l:pos = GetUnderCursor(a:name)
+      let l:pos = s:GetUnderCursor(a:name)
       call s:ReplaceCoords('['.a:name.']('.a:path.')',l:pos)
     else
       echo "Select something to make a link."
@@ -215,6 +232,8 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   function! s:LinkHandler()
     let l:word = expand('<cWORD>')
     " URL
+    " Little trick: Since url is checked first it handles also things like
+    " ![test](https://img.com) =)
     let l:match = matchlist(l:word ,'https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\-\?\=]\+')
     if len(l:match) > 0
       let l:url = l:match[0]
@@ -231,7 +250,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       return
     endif
     " markdown link []()
-    let match_link = GetUnderCursor('\[.\+\](.\+)')
+    let match_link = s:GetUnderCursor('\[.\+\](.\+)')
     " If current line contains a link follow it 
     if  match_link.start >= 0
       " extract groups -> link_name and file_name
@@ -240,6 +259,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       let l:file = l:parts[2]
       " open link takes care of creating the file and allows for going back with backspace
       call vimwiki#base#open_link("e",l:file)
+      call s:InsertHeader()
       return
     endif 
     " None of the above, so create link
@@ -258,7 +278,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     call s:MakeLink(l:name, l:path)
   endfunction
   " function! ChangeWordUnderCursor(from, to)
-  "   let pos = GetUnderCursor(a:from)
+  "   let pos = s:GetUnderCursor(a:from)
   "   call ReplaceCoords(a:to, pos)
   " endfunction
   function! s:GetUnderCursor(pattern)
@@ -295,6 +315,15 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       call setline(line('.'), newline)
     endif
   endfunction
+  function! s:InsertHeader()
+  " Insert yaml front matter in empty files
+  " used in combo with BufEnter ++once
+    if line('$') == 1 && getline(1) == ''
+      let l:date = system('date --iso-8601=seconds')
+      execute "normal! ggi---\<CR>tags:  \<CR>title:  \<CR>date: " . l:date . "---\<CR>"
+      normal ggj$
+    endif
+  endfunction
   fun! GoVimwiki()
     " autocmd InsertLeave <buffer> :update
     autocmd BufEnter <buffer> setlocal signcolumn=no
@@ -308,15 +337,19 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     nmap <buffer> <leader>wd <Plug>VimwikiDeleteFile
     nmap <buffer> <leader>wr <Plug>VimwikiRenameFile
     nmap <buffer> <leader>wb :call <SID>AddBackward()<CR>
+    nmap <buffer> <leader>wi :call <SID>MyPastePNG()<CR>
     nmap <buffer> <CR> :call <SID>LinkHandler()<CR>
-    " WikiList : show the notes in chronological order and search tags
-    nnoremap <buffer> <leader>wl :Notes<CR>
+    " nnoremap <buffer> <leader>wh :call <SID>InsertHeader()<CR> 
   endfun
   augroup vimwikicmds
     autocmd! vimwikicmds
     autocmd FileType vimwiki :call GoVimwiki()
   augroup end
-  nmap <leader>n :execute "e " . <SID>MakeZettleNote()['path']<CR>
+  function! s:OpenNote()
+    execute "e " . <SID>MakeZettleNote()['path']
+    call s:InsertHeader()
+  endfunction
+  nmap <leader>n :call <SID>OpenNote()<CR>
   "\<CR>
   " copy the current file name to use it in notes
   " nmap <leader>cpf :let @+ = expand("%:t")<CR>
@@ -548,17 +581,18 @@ Plug 'junegunn/fzf.vim'
     let suggestions = spellsuggest(expand("<cword>"))
     return fzf#run({'source': suggestions, 'sink': function("FzfSpellSink"), 'down': 10 })
   endfunction
+  command! -bang -nargs=* Notes
+  \ call fzf#vim#grep(
+  \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -- '.shellescape('tags:'), 1,
+  \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
+  " fzf tags
+  nnoremap <leader>ft :Notes<CR>
   nnoremap <leader>fd :call FzfSpell()<CR>
   nnoremap <leader>ff :Files<CR>
   nnoremap <leader>fb :Buffers<CR>
   nnoremap <leader>fl :Lines<CR>
   nnoremap <leader>fg :Rg<CR>
   nnoremap <leader>fw :Rg <C-R><C-W><CR>
-  " Notes is part of the vimwiki mappings <leader>wl
-  command! -bang -nargs=* Notes
-  \ call fzf#vim#grep(
-  \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -- '.shellescape('tags:'), 1,
-  \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
 
 Plug 'liuchengxu/vim-which-key'
   set timeout
@@ -583,7 +617,7 @@ Plug 'liuchengxu/vim-which-key'
         \ 'b' : 'Backward link  ',
         \ 'd' : 'Delete file  ',
         \ 'f' : 'Forward link to new note  ',
-        \ 'l' : 'List notes, search tags  ',
+        \ 'i' : 'Put link to clipboard img  ',
         \ 'r' : 'Rename file  ',
         \ 'w' : 'Open index  ',
         \ }
@@ -594,6 +628,7 @@ Plug 'liuchengxu/vim-which-key'
         \ 'f' : 'Files  ',
         \ 'g' : 'RipGrep  ',
         \ 'l' : 'Lines  ',
+        \ 't' : 'List notes, search tags  ',
         \ 'w' : 'RipGrep curr word  ',
         \ }
   " the horiz floating bar is an ugly grey wall
