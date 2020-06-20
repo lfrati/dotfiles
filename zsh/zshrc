@@ -137,6 +137,8 @@ export PATH="$PATH:$(ruby -e 'puts Gem.user_dir')/bin"
 
 export PATH="$PATH:$HOME/go/bin"
 
+export PATH="$PATH:$HOME/.cabal/bin"
+
 # Until TensorFlow supports Cuda 10.1 I'm renaming 10.1 -> 10.0 and add it to the path
 export LD_LIBRARY_PATH=/usr/local/cuda10:$LD_LIBRARY_PATH
 
