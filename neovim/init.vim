@@ -137,13 +137,6 @@ Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
     autocmd Filetype json,python,javascript :call GoCoc()
   augroup end
 
-Plug 'SirVer/ultisnips'              " Custom snippets
-  " Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
-  let g:UltiSnipsExpandTrigger="<C-u>"
-  let g:UltiSnipsJumpForwardTrigger="<Down>"
-  let g:UltiSnipsJumpBackwardTrigger="<Up>"
-  let g:UltiSnipsSnippetDirectories=[$HOME.'/dotfiles/neovim/UltiSnips']
-
 " My zettelkasten for life?
 Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   let g:vimwiki_key_mappings =
@@ -158,7 +151,6 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     \   'html': 0,
     \   'mouse': 0,
     \ }  
-  nmap <Leader>ww <Plug>VimwikiIndex
   let g:vimwiki_global_ext=0 " Prevent creation of temporary wikis so that markdown file are not flagged vimwiki
   " let g:vimwiki_folding='expr'
   let g:vimwiki_folding='custom'
@@ -201,7 +193,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " files requires the path
     return {"path" : l:path, "id" : l:id }
   endfunction
-  function! s:MyPastePNG()
+  function! s:InsertPNG()
   " If there is an img in the clipboard save it to
   " VIMWIKI_DIR/assets/filename_rndmst and insert an image link
     py from uuid import uuid4
@@ -250,16 +242,17 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       return
     endif
     " markdown link []()
-    let match_link = s:GetUnderCursor('\[.\+\](.\+)')
+    let match_link = s:GetUnderCursor('\[.\+\]([^)]\+)')
     " If current line contains a link follow it 
     if  match_link.start >= 0
       " extract groups -> link_name and file_name
-      let l:parts = matchlist(match_link.match, '\[\([^\]]\+\)\](\(.\+\))')
+      let l:parts = matchlist(match_link.match, '\[\([^\]]\+\)\](\([^)]\+\))')
       " matchlist returns [fullmatch, group1, group2,...]
+      let l:title = l:parts[1]
       let l:file = l:parts[2]
       " open link takes care of creating the file and allows for going back with backspace
       call vimwiki#base#open_link("e",l:file)
-      call s:InsertHeader()
+      call s:InsertHeader("",l:title)
       return
     endif 
     " None of the above, so create link
@@ -315,13 +308,34 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       call setline(line('.'), newline)
     endif
   endfunction
-  function! s:InsertHeader()
+  function! s:InsertHeader(tag,title)
   " Insert yaml front matter in empty files
-  " used in combo with BufEnter ++once
     if line('$') == 1 && getline(1) == ''
-      let l:date = system('date --iso-8601=seconds')
-      execute "normal! ggi---\<CR>tags:  \<CR>title:  \<CR>date: " . l:date . "---\<CR>"
+      let l:tags = "tags: " . a:tag . "\<CR>"
+      let l:title = "title: " . a:title . "\<CR>"
+      let l:date = "date: " . system('date --iso-8601=seconds')
+      let l:header = "---\<CR>" . l:tags . l:title . l:date . "---\<CR>"
+      execute "normal! ggi" . l:header
       normal ggj$
+    endif
+  endfunction
+  function! s:MakeBib()
+    if strpart(@+,0,1) == "@"
+      normal G
+      call append(line('$'), "```bib")
+      call append(line('$'), "")
+      call append(line('$'), "```")
+      execute "normal! Gk\"+gP"
+      " copy title from bib to a-register
+      execute 'g/^[ ]\+title=/normal www"ayi}'
+      " make the note title the same as bib title
+      execute '%s/title\:.\+/title\: ' . tolower(@a) . '/'
+      " add paper tag
+      execute '%s/tags\: /tags\: :paper:/'
+      " sometimes an empty line appears, don't know why
+      execute '%s/}\n\n```/}\r```/'
+    else
+      echo "Clipboard doesn't contain bib"
     endif
   endfunction
   fun! GoVimwiki()
@@ -337,17 +351,18 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     nmap <buffer> <leader>wd <Plug>VimwikiDeleteFile
     nmap <buffer> <leader>wr <Plug>VimwikiRenameFile
     nmap <buffer> <leader>wb :call <SID>AddBackward()<CR>
-    nmap <buffer> <leader>wi :call <SID>MyPastePNG()<CR>
+    nmap <buffer> <leader>wp :call <SID>MakeBib()<CR>
+    nmap <buffer> <leader>wi :call <SID>InsertPNG()<CR>
     nmap <buffer> <CR> :call <SID>LinkHandler()<CR>
-    " nnoremap <buffer> <leader>wh :call <SID>InsertHeader()<CR> 
   endfun
+  nmap <Leader>ww <Plug>VimwikiIndex
   augroup vimwikicmds
     autocmd! vimwikicmds
     autocmd FileType vimwiki :call GoVimwiki()
   augroup end
   function! s:OpenNote()
     execute "e " . <SID>MakeZettleNote()['path']
-    call s:InsertHeader()
+    call s:InsertHeader("","")
   endfunction
   nmap <leader>n :call <SID>OpenNote()<CR>
   "\<CR>
@@ -374,18 +389,17 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
       \ 'active': {
       \   'left': [ 
       \             [ 'mode', 'paste','readonly','coc_warning','coc_error'],
-      \             [ 'cocstatus' ],
+      \             [ 'cocstatus','mymodified' ],
       \             [ 'filename' ] 
       \           ],
       \   'right': [ 
       \              [ 'gitbranch','lineinfo' ],
-      \              [ 'modified','fileencoding','filetype','sync']
+      \              [ 'fileencoding','filetype','sync']
       \            ]
       \ },
       \ 'inactive': {
-      \ 'left': [ [ 'filename' ] ],
-      \ 'right': [ [ 'lineinfo' ],
-      \            [ 'modified','sync' ] ] 
+      \ 'left': [ [ 'filename'],[ 'sync' ] ],
+      \ 'right': [ ['modified'] ]
       \ },
       \ 'component_function': {
       \   'gitbranch': 'GitStatus',
@@ -394,12 +408,12 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
       \   'cocstatus': 'CocStatusMsg'
       \ },
       \ 'component_expand':{
-      \   'modified' : 'ModifiedFlag',
+      \   'mymodified' : 'ModifiedFlag',
       \   'coc_error' : 'LightlineCocErrors',
       \   'coc_warning' : 'LightlineCocWarnings'
       \ },
       \ 'component_type':{
-      \   'modified' : 'error',
+      \   'mymodified' : 'error',
       \   'coc_error' : 'error',
       \   'coc_warning' : 'warning'
       \ }
@@ -419,7 +433,8 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     " autocmd BufEnter * echo 'BUFF'
   augroup END
   function! ModifiedFlag()
-    " custom function that checks if the buffer has been modified
+    " for some reason it doesn't work with inactive buffers since it always shows
+    " the value of the active one.
     return &modifiable && &modified ? '[+]' : ''
 	endfunction
   " From https://github.com/neoclide/coc.nvim/issues/401
@@ -482,6 +497,7 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     let l:palette.normal.middle = [ [ '#ABB2BF', '#282C34', '235', '174' ] ]
     " let l:palette.normal.middle = [ [ '#ABB2BF', '#282C34', '145', '235' ] ]
     let l:palette.inactive.middle = [ [ '#ABB2BF', '#282C34', '145', '146' ] ]
+    let l:palette.inactive.right = [ [ '#ABB2BF', '#282C34', '235', '204' ] ]
     " let l:palette.tabline.middle = l:palette.normal.middle
     call lightline#colorscheme()
   endfunction
@@ -519,6 +535,10 @@ Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
 
 Plug 'junegunn/fzf.vim'
+  " Always enable preview window on the right with 60% width
+  " let g:fzf_preview_window = 'right:60%'
+  let g:fzf_layout = {'window': {'height':0.8, 'width':0.8, 'border':'sharp'}}
+  let $FZF_DEFAULT_OPTS='--reverse --preview-window noborder' " hide broken rounded corners in the inner preview
   let g:fzf_colors =
   \ { 'fg':      ['fg', 'Normal'],
     \ 'bg':      ['bg', 'Normal'],
@@ -581,12 +601,43 @@ Plug 'junegunn/fzf.vim'
     let suggestions = spellsuggest(expand("<cword>"))
     return fzf#run({'source': suggestions, 'sink': function("FzfSpellSink"), 'down': 10 })
   endfunction
-  command! -bang -nargs=* Notes
+  command! -bang -nargs=* NoteTags
   \ call fzf#vim#grep(
-  \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -- '.shellescape('tags:'), 1,
+  \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -e ^tags: -- ', 1,
   \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
+  function! OpenPaper(lines)
+    let l:file = split(a:lines,":")[0]
+    " vimwiki open_link based on the default wiki, no need for full path
+    call vimwiki#base#open_link("e",l:file)
+  endfunction
+  function! PapersFZF(query, fullscreen)
+    " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
+    " line-number/column is needed for the preview
+    " '|| true' prevents showing 'command failed ...' when nothing is matched
+    let command_fmt = 'rg :paper: -l | xargs rg --line-number --column --color=always --smart-case -- %s || true'
+    let initial_command = printf(command_fmt, shellescape(a:query))
+    let reload_command = printf(command_fmt, '{q}')
+    " options = 
+    " sink : takes the selected files and opens it in a new buffer
+    " bind : restart rg search when the typed string changes
+    " phony: turns off searching with fzf and lets rg do all the work (o.w.
+    " fzf would search in the strings returned by rg)
+    " ansi : shows the colored output of rg (--color=always) as actual colors
+    let spec = {
+             \ 'source' : initial_command,
+             \ 'sink': function("OpenPaper"),
+             \ 'options':[ '--bind', 'change:reload:'.reload_command,
+                         \ '--phony',
+                         \ '--ansi',
+                         \ '--multi'],
+             \ 'dir':g:VIMWIKI_DIR
+             \ }
+    call fzf#run(fzf#wrap(fzf#vim#with_preview(spec)))
+  endfunction
+  command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0) 
   " fzf tags
-  nnoremap <leader>ft :Notes<CR>
+  nnoremap <leader>ft :NoteTags<CR>
+  nnoremap <leader>fp :Papers<CR>
   nnoremap <leader>fd :call FzfSpell()<CR>
   nnoremap <leader>ff :Files<CR>
   nnoremap <leader>fb :Buffers<CR>
@@ -616,8 +667,8 @@ Plug 'liuchengxu/vim-which-key'
         \ 'name' : '+vimwiki  ',
         \ 'b' : 'Backward link  ',
         \ 'd' : 'Delete file  ',
-        \ 'f' : 'Forward link to new note  ',
-        \ 'i' : 'Put link to clipboard img  ',
+        \ 'i' : 'Insert png from clipboard ',
+        \ 'p' : 'Insert paper .bib  ',
         \ 'r' : 'Rename file  ',
         \ 'w' : 'Open index  ',
         \ }
@@ -847,14 +898,23 @@ nnoremap <leader>d :put =strftime('%Y-%m-%d')<CR>
 " Switch CWD to the directory of the open buffer
 " nnoremap <leader>cd :cd %:p:h<cr>:pwd<cr>
 " Take quick notes, with = so that is close to buffer close
-nnoremap <leader>= :e ~/buffer.md<CR>
+function! s:ToggleScratchpad()
+  let l:file = expand("%:t") 
+  if l:file ==? "buffer.md"
+    bd
+  else
+    e ~/buffer.md
+  endif
+endfunction
+nnoremap <leader>= :call <SID>ToggleScratchpad()<CR>
 nnoremap <leader>- :bd<Cr>
 " nnoremap <leader>wc :echo wordcount()["words"]<CR>
 " Type a replacement term and press . to repeat the replacement again. Useful
 " for replacing a few instances of the term (comparable to multiple cursors)
 nnoremap <silent> s* :let @/='\<'.expand('<cword>').'\>'<CR>cgn
 " Dictionary lookup
-nnoremap <leader>l :execute "!xdg-open https://www.merriam-webster.com/dictionary/" . expand('<cword>')<CR>
+" nnoremap <leader>l :execute "!xdg-open https://www.merriam-webster.com/dictionary/" . expand('<cword>')<CR>
+nnoremap <leader>l :execute "!xdg-open \"https://www.dictionary.com/browse/" . expand('<cword>') . "?s=t\""<CR>
 
 " Delete trailing white space on save, useful for some filetypes ;)
 fun! CleanExtraSpaces()
@@ -886,8 +946,11 @@ nnoremap <C-H> <C-W><C-H>
 " Better navigation of long lines, when wrapping and pressing up/down
 " you might want to that part of the line, not the line above
 " http://bit-101.com/techtips/2018/02/23/Better-cursor-movement-in-vim/
-nnoremap j gj
-nnoremap k gk
+" Disable because it fucks with jumps, 3j doesn't consider wrapping so moving
+" around becomes pretty tricky (3j will move you to different spots depending
+" on how much wrapping there is)
+" nnoremap j gj
+" nnoremap k gk
 
 " center current line after jumping to prev/next locations
 nnoremap <C-o> <C-o>zz
@@ -1054,6 +1117,13 @@ set background=dark " Because dark is cool
   " nmap <leader>7 <Plug>BufTabLine.Go(7)
   " nmap <leader>8 <Plug>BufTabLine.Go(8)
   " nmap <leader>9 <Plug>BufTabLine.Go(9)
+
+" Plug 'SirVer/ultisnips'              " Custom snippets
+"   " Trigger configuration. Do not use <tab> if you use https://github.com/Valloric/YouCompleteMe.
+"   let g:UltiSnipsExpandTrigger="<C-u>"
+"   let g:UltiSnipsJumpForwardTrigger="<Down>"
+"   let g:UltiSnipsJumpBackwardTrigger="<Up>"
+"   let g:UltiSnipsSnippetDirectories=[$HOME.'/dotfiles/neovim/UltiSnips']
 
 
 " }}}
