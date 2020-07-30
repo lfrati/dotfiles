@@ -186,9 +186,7 @@ colors:
 
   # Normal colors
   normal:
-    # NOTE: Use '#131613' for the `black` color if you'd like to see
-    # black text on the background.
-    black:   '#282c34'
+    black:   '#070708'
     red:     '#e03c65'
     green:   '#00cd00'
     yellow:  '#f19a66'

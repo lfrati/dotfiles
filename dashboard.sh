@@ -12,6 +12,7 @@ session="dash"
 # Check if the session exists, discarding output
 # We can check $? for the exit status (zero for success, non-zero for failure)
 tmux has-session -t $session 2>/dev/null
+tmux set status off
 
 if [ $? != 0 ]; then
 
@@ -25,10 +26,6 @@ if [ $? != 0 ]; then
   # Pane 2
   # Split pane 1 horizontally to make room for GPU/CPU info
   tmux splitw -h -p 32
-
-  # Pane 3
-  # Split for small CPU info
-  tmux splitw -v -p 5
 
   # Pane 4
   # Make thin bottom pane for music
@@ -45,9 +42,6 @@ if [ $? != 0 ]; then
   tmux send-keys "watch --no-title -n 5 nvidia-smi" C-m
 
   tmux selectp -t 3
-  tmux send-keys "watch --no-title -n 5 \" sensors -A k10temp-pci-00c3 | grep Tdie | sed -E 's/Tdie: +/CPU temp: /'\"" C-m
-
-  tmux selectp -t 4
   tmux send-keys "ncmpcpp" C-m
 
 
