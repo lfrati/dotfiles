@@ -87,3 +87,57 @@ getbib(){
 #   fi
 
 # }
+
+papers() {
+  # Use fzf to search within the text of my Zotero papers and open them
+	RG_PREFIX="rga --files-with-matches"
+  ORIGIN=$(pwd)
+  cd /home/lapo/Dropbox/Apps/Zotero
+	local file
+	file="$(
+		FZF_DEFAULT_COMMAND="$RG_PREFIX '$1'" \
+			fzf --sort --preview="[[ ! -z {} ]] && rga --pretty --context 5 {q} {}" \
+				--phony -q "$1" \
+				--bind "change:reload:$RG_PREFIX {q}" \
+				--preview-window="50%:wrap"
+	)"
+
+  if [ -z "$file" ]
+  then
+    echo "No file selected"
+  else
+    echo "opening: $file"
+    i3-msg layout tabbed &>/dev/null
+    xdg-open "$file" &>/dev/null
+  fi
+
+  cd $ORIGIN
+}
+
+
+waconfig(){
+  # Set up my old wacom bamboo touch, turning off touch and mapping it to the left screen
+  touchID=$(xsetwacom list devices | grep TOUCH | sed 's/.*id: \([0-9]*\).*/\1/')
+  stylusID=$(xsetwacom list devices | grep STYLUS | sed 's/.*id: \([0-9]*\).*/\1/')
+  eraserID=$(xsetwacom list devices | grep ERASER | sed 's/.*id: \([0-9]*\).*/\1/')
+  padID=$(xsetwacom list devices | grep PAD | sed 's/.*id: \([0-9]*\).*/\1/')
+  # echo touch $touchID
+  # echo stylus $stylusID
+
+  # Map stylus/eraser to main monitor +1920+0 for secondary monitor
+  xsetwacom set $stylusID MapToOutput 1920x1080+0+0
+  xsetwacom set $eraserID MapToOutput 1920x1080+0+0
+
+  # Set left-handed mode to have more convenient cable direction to pc
+  xsetwacom set $stylusID rotate HALF
+  xsetwacom set $eraserID rotate HALF
+
+  # Touch support sucks
+  xsetwacom set $touchID TOUCH off
+
+  # Disable useless buttons, buttons 4-7 are special?
+  for e in {1..3} {8..9}
+  do
+    xsetwacom set $padID Button "$e" "button 0"
+  done
+}
