@@ -1,0 +1,87 @@
+# i3blocks configuration file
+#
+# The i3blocks man page describes the usage of the binary,
+# and its website describes the configuration:
+#
+#     https://vivien.github.io/i3blocks
+
+
+# Global properties
+separator=false
+separator_block_width=25
+
+[disk]
+command=/home/lapo/dotfiles/i3blocks/disk
+LABEL=Home: 
+#DIR=$HOME
+ALERT_LOW=10
+interval=30
+color=#7ac9fa
+separator_block_width=10
+
+[disk]
+command=/home/lapo/dotfiles/i3blocks/disk
+LABEL=Bulk: 
+DIR=/home/Bulk
+ALERT_LOW=10
+interval=30
+color=#7ac9fa
+separator_block_width=10
+
+[disk]
+command=/home/lapo/dotfiles/i3blocks/disk
+LABEL=Storage: 
+DIR=/home/Storage
+ALERT_LOW=10
+interval=30
+color=#7ac9fa
+separator=true
+
+[memory]
+command=/home/lapo/dotfiles/i3blocks/memory
+label=MEM 
+interval=30
+color=#8a85cc
+separator=true
+
+[cpu_temp]
+command=/home/lapo/dotfiles/i3blocks/temperature
+label=CPU 
+interval=10
+#T_WARN=70
+#T_CRIT=90
+#SENSOR_CHIP=""
+color=#05dfd7
+separator_block_width=10
+
+[cpu_usage]
+command=/home/lapo/dotfiles/i3blocks/cpu_usage
+interval=10
+#min_width=CPU: 100.00%
+#T_WARN=50
+#T_CRIT=80
+#DECIMALS=2
+color=#05dfd7
+separator=true
+
+[gpu-temp]
+command=/home/lapo/dotfiles/i3blocks/gpu-temp
+interval=5
+#min_width=GPU 100% 100% 100% 100%
+#T_WARN=70
+#T_CRIT=90
+color=#efb1ff
+separator=true
+
+[iface]
+command=/home/lapo/dotfiles/i3blocks/iface
+#IFACE=wlan0
+#ADDRESS_FAMILY=inet6?
+color=#89c489
+interval=10
+separator=true
+
+[time]
+command=date +'%a %Y-%m-%d %H:%M:%S'
+interval=1
+separator=true

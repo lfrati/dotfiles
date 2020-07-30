@@ -150,7 +150,7 @@ bindsym $mod+w layout tabbed
 bindsym $mod+e layout toggle split
 
 # toggle tiling / floating
-# bindsym $mod+Shift+space floating toggle
+bindsym $mod+Shift+f floating toggle
 
 # change focus between tiling / floating windows
 # bindsym $mod+space focus mode_toggle
@@ -234,8 +234,11 @@ bindsym $mod+r mode "resize"
 
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
+# bar {
+#         status_command i3status
+# }
 bar {
-        status_command i3status
+        status_command i3blocks
 }
 
 # focus_follows_mouse no
@@ -275,13 +278,19 @@ bindsym $mod+Tab workspace back_and_forth
 exec_always --no-startup-id feh --bg-center /home/lapo/dotfiles/archwall.png --bg-center /home/lapo/dotfiles/archwall.png
 exec_always --no-startup-id setxkbmap -option caps:swapescape 
 exec_always --no-startup-id xset b off # turn off annoying beeps every time I search a word in a web page
-exec --no-startup-id autossh -M 0 -f -T -N rvacc
+# exec --no-startup-id autossh -M 0 -f -T -N rvacc # set up reverse-ssh through vacc
 # exec --no-startup-id xrandr --output HDMI-0 --auto --right-of DVI-D-0 --rotate left
 exec --no-startup-id volumeicon
 exec --no-startup-id dropbox start
 exec --no-startup-id mpd # music demon to control with mpc and connect to with ncmpcpp
 exec --no-startup-id dunst # notification daemon, supports html, notify-send...
 exec --no-startup-id tilda # diary/notes + scratch terminal
-exec --no-startup-id urxvt -hold -e sh /home/lapo/dotfiles/dashboard.sh
 exec --no-startup-id unclutter # hide mouse when idle 
 exec --no-startup-id xcompmgr -c -l0 -t0 -r0 -o.00 # fix zoom black screen annotations https://support.zoom.us/hc/en-us/articles/202082128-Black-Screen-During-Screen-Sharing
+# exec --no-startup-id alacritty --hold -e sh /home/lapo/dotfiles/dashboard.sh
+
+# opening multiple applications is a mess because if the take some time to load the focus get thrown all over
+# the place and nothing ends up where I want it.
+exec --no-startup-id i3-msg 'workspace 10; exec alacritty --hold -e sh /home/lapo/dotfiles/dashboard.sh'
+
+
