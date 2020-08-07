@@ -41,7 +41,9 @@ syntax on
 call plug#begin('~/.vim/plugged')
 
 " Plug 'ndmitchell/ghcid', { 'rtp': 'plugins/nvim' }
-Plug 'neovimhaskell/haskell-vim'
+" Plug 'neovimhaskell/haskell-vim'
+
+Plug 'tpope/vim-unimpaired'
 
 Plug 'JuliaEditorSupport/julia-vim'
 
@@ -75,11 +77,6 @@ Plug 'plasticboy/vim-markdown'
   au BufEnter *.md setlocal foldexpr=MarkdownLevel()  
   au BufEnter *.md setlocal foldmethod=expr
   " au BufEnter *.md setlocal foldlevel=99
-
-" God this plugin is good. Live rendering, cursor syncing
-Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
-  " nmap <leader>md <Plug>MarkdownPreviewToggle
-  nmap <leader>m <Plug>MarkdownPreviewToggle
 
 Plug 'airblade/vim-gitgutter'
   let g:gitgutter_map_keys = 0 
@@ -137,6 +134,12 @@ Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
     autocmd Filetype json,python,javascript :call GoCoc()
   augroup end
 
+" God this plugin is good. Live rendering, cursor syncing
+" Makes previewing my vimkikis hella easy
+Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
+  " nmap <leader>md <Plug>MarkdownPreviewToggle
+  nmap <leader>m <Plug>MarkdownPreviewToggle
+
 " My zettelkasten for life?
 Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   let g:vimwiki_key_mappings =
@@ -161,15 +164,6 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
                         \ 'auto_tags': 1,
                         \ 'auto_diary_index': 1,
                         \ 'custom_wiki2html': '/home/lapo/dotfiles/neovim/wiki2html.sh'}]
-  let g:tagbar_type_vimwiki = {
-            \   'ctagstype':'vimwiki'
-            \ , 'kinds':['h:header']
-            \ , 'sro':'&&&'
-            \ , 'kind2scope':{'h':'header'}
-            \ , 'sort':0
-            \ , 'ctagsbin':'/home/lapo/dotfiles/neovim/vwtags.py'
-            \ , 'ctagsargs': 'markdown'
-            \ }
   let g:VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
   function! s:GetVisualSelection()
     " I think you can guess what this one does
@@ -314,7 +308,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       let l:tags = "tags: " . a:tag . "\<CR>"
       let l:title = "title: " . a:title . "\<CR>"
       let l:date = "date: " . system('date --iso-8601=seconds')
-      let l:header = "---\<CR>" . l:tags . l:title . l:date . "---\<CR>"
+      let l:header = "--- \<CR>" . l:tags . l:title . l:date . "--- \<CR>"
       execute "normal! ggi" . l:header
       normal ggj$
     endif
@@ -528,17 +522,46 @@ Plug 'junegunn/goyo.vim'
 Plug 'junegunn/limelight.vim'
   let g:limelight_conceal_ctermfg = 237
 
+Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
+  nmap <leader>gs :G<CR>
+  " MERGING get from right side (j is on the right)
+  nmap <leader>gj :diffget //3<CR>    
+  " MERGING get from left side (f is on the left)
+  nmap <leader>gf :diffget //2<CR>
+  " NOT WORKING
+  " function FugitiveBack()
+  "   if exists("b:fugitive_type") && b:fugitive_type =~# '^\%(tree\|blob\)$'
+  "       echo b:fugitive_type
+  "       edit %:h<CR>
+  "   else
+  "     echo "No fugitive_type"
+  "   endif
+  " endfunction
+  " autocmd! BufEnter fugitive://* nnoremap <buffer> <BS> :call FugitiveBack()<CR>
+
 " The third component of the holy trinity of plugins 
 " (fzf + vimwiki + easymotion)
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-
-Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
 
 Plug 'junegunn/fzf.vim'
   " Always enable preview window on the right with 60% width
   " let g:fzf_preview_window = 'right:60%'
   let g:fzf_layout = {'window': {'height':0.8, 'width':0.8, 'border':'sharp'}}
-  let $FZF_DEFAULT_OPTS='--reverse --preview-window noborder' " hide broken rounded corners in the inner preview
+  let $FZF_DEFAULT_OPTS='--reverse --preview-window noborder --bind ctrl-a:select-all' " hide broken rounded corners in the inner preview
+  " CTRL-A CTRL-Q to select all and build quickfix list
+  " https://github.com/junegunn/fzf.vim/issues/185#issuecomment-322120216
+  " Note that g:fzf_action only applies to commands that handle plain file paths (i.e used by fzf#wrap() with arguments without explicit sink). 
+  " In other cases, you'll have to implement your own sink function.
+  function! s:build_quickfix_list(lines)
+    call setqflist(map(copy(a:lines), '{ "filename": v:val }'))
+    copen
+    cc
+  endfunction
+  let g:fzf_action = {
+    \ 'ctrl-q': function('s:build_quickfix_list'),
+    \ 'ctrl-t': 'tab split',
+    \ 'ctrl-x': 'split',
+    \ 'ctrl-v': 'vsplit' }
   let g:fzf_colors =
   \ { 'fg':      ['fg', 'Normal'],
     \ 'bg':      ['bg', 'Normal'],
@@ -606,11 +629,41 @@ Plug 'junegunn/fzf.vim'
   \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -e ^tags: -- ', 1,
   \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
   function! OpenPaper(lines)
-    let l:file = split(a:lines,":")[0]
-    " vimwiki open_link based on the default wiki, no need for full path
-    call vimwiki#base#open_link("e",l:file)
+    if len(a:lines) == 1
+      let l:file = split(a:lines,":")[0]
+      " vimwiki open_link based on the default wiki, no need for full path
+      call vimwiki#base#open_link("e",l:file)
+    else
+      let l:qflist = copy(a:lines)
+      let l:qflist =  map(l:qflist, { key, val -> split(val,":")})
+      let l:qflist = map(l:qflist, '{ "filename": v:val[0] , "lnum" : v:val[1] , "text" : join(v:val[3:],"")}')
+      call setqflist(l:qflist)
+      copen
+      cc
+    endif
   endfunction
-  function! PapersFZF(query, fullscreen)
+  function! InsertAndMove(text)
+      let pos = getpos('.')
+      let line = getline('.')
+      call setline('.', strpart(line, 0, col('.') - 1) . a:text . strpart(line, col('.') - 1))
+      let newcol = col('.') + len(a:text)
+      let pos[2] = newcol
+      call setpos('.', pos)
+  endfunction
+  function! CitePaper(lines)
+    if len(a:lines) == 1
+      let citation= '[cite](' . split(a:lines[0],':')[0] . ')'
+      call InsertAndMove(citation)
+    else
+      let citation= '[cite](' . split(a:lines[0],':')[0] . ')'
+      call InsertAndMove(citation)
+      for line in a:lines[1:]
+        let citation= ',[cite](' . split(line,':')[0] . ')'
+        call InsertAndMove(citation)
+      endfor
+    endif
+  endfunction
+  function! PapersFZF(query, fullscreen, sink)
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
     " line-number/column is needed for the preview
     " '|| true' prevents showing 'command failed ...' when nothing is matched
@@ -625,7 +678,7 @@ Plug 'junegunn/fzf.vim'
     " ansi : shows the colored output of rg (--color=always) as actual colors
     let spec = {
              \ 'source' : initial_command,
-             \ 'sink': function("OpenPaper"),
+             \ 'sink*': function(a:sink),
              \ 'options':[ '--bind', 'change:reload:'.reload_command,
                          \ '--phony',
                          \ '--ansi',
@@ -634,10 +687,12 @@ Plug 'junegunn/fzf.vim'
              \ }
     call fzf#run(fzf#wrap(fzf#vim#with_preview(spec)))
   endfunction
-  command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0) 
+  command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0, "OpenPaper") 
+  command! -nargs=* -bang Cite call PapersFZF(<q-args>, <bang>0, "CitePaper") 
   " fzf tags
   nnoremap <leader>ft :NoteTags<CR>
   nnoremap <leader>fp :Papers<CR>
+  nnoremap <leader>fc :Cite<CR>
   nnoremap <leader>fd :call FzfSpell()<CR>
   nnoremap <leader>ff :Files<CR>
   nnoremap <leader>fb :Buffers<CR>
@@ -675,6 +730,7 @@ Plug 'liuchengxu/vim-which-key'
   let g:which_key_map.f = {
         \ 'name' : '+fzf  ',
         \ 'b' : 'Buffers  ',
+        \ 'c' : 'Cite  ',
         \ 'd' : 'Dictionary  ',
         \ 'f' : 'Files  ',
         \ 'g' : 'RipGrep  ',
@@ -862,15 +918,17 @@ let g:python_host_prog="/home/lapo/miniconda3/envs/neovim2/bin/python"
 " Mappings {{{
 " ============================================================================
 
-function! s:QuickGetLine(off)
-  redraw
-  let l:start = line('.')
-  " Get the line with offset a:off (works for negative values)
-  let l:line = getline(l:start + str2nr(a:off))
-  " Insert that line below the cursor
-  put =l:line
-endfunction
-nnoremap <leader>g :call <SID>QuickGetLine(input('Line to copy: '))<CR>
+" Available in tpope/vim-unimpaired's ]e/[e
+" function! s:QuickGetLine(off)
+"   redraw
+"   let l:start = line('.')
+"   " Get the line with offset a:off (works for negative values)
+"   let l:line = getline(l:start + str2nr(a:off))
+"   " Insert that line below the cursor
+"   put =l:line
+" endfunction
+" nnoremap <leader>g :call <SID>QuickGetLine(input('Line to copy: '))<CR>
+
 " Use capital W as a shortcut to save and quit
 " nnoremap W :w<CR>
 " nnoremap Q :q<CR>
@@ -893,8 +951,9 @@ nnoremap <leader>c :e $MYVIMRC<CR>
 " alternate between current file and previous file
 nnoremap <leader>p <C-^> 
 " insert date
-" nnoremap <leader>date :put =strftime('%Y-%m-%d')<CR>
-nnoremap <leader>d :put =strftime('%Y-%m-%d')<CR>
+nnoremap <leader>d :execute "normal! i" . strftime('%Y-%m-%d')<CR>
+
+" nnoremap <leader>d :put =strftime('%Y-%m-%d')<CR>
 " Switch CWD to the directory of the open buffer
 " nnoremap <leader>cd :cd %:p:h<cr>:pwd<cr>
 " Take quick notes, with = so that is close to buffer close
@@ -1100,6 +1159,15 @@ set background=dark " Because dark is cool
 " Plug 'majutsushi/tagbar'
 "   let g:tagbar_autofocus = 1
 "   nmap <F6> :TagbarToggle<CR>
+"   let g:tagbar_type_vimwiki = {
+"           \   'ctagstype':'vimwiki'
+"           \ , 'kinds':['h:header']
+"           \ , 'sro':'&&&'
+"           \ , 'kind2scope':{'h':'header'}
+"           \ , 'sort':0
+"           \ , 'ctagsbin':'/home/lapo/dotfiles/neovim/vwtags.py'
+"           \ , 'ctagsargs': 'markdown'
+"           \ }
 
 " Plug 'itchyny/calendar.vim'
 
