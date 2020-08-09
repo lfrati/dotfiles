@@ -165,105 +165,9 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
                         \ 'auto_diary_index': 1,
                         \ 'custom_wiki2html': '/home/lapo/dotfiles/neovim/wiki2html.sh'}]
   let g:VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
-  function! s:GetVisualSelection()
-    " I think you can guess what this one does
-    let [line_start, column_start] = getpos("'<")[1:2]
-    let [line_end, column_end] = getpos("'>")[1:2]
-    let lines = getline(line_start, line_end)
-    if len(lines) == 0
-        return ''
-    endif
-    let lines[-1] = lines[-1][: column_end - (&selection == 'inclusive' ? 1 : 2)]
-    let lines[0] = lines[0][column_start - 1:]
-    return join(lines, "\n")
-  endfunction
-  function! s:MakeZettleNote()
-    " Create a new note with a unique name using the date + random string
-    py from uuid import uuid4
-    py from datetime import datetime
-    let l:id = pyeval("datetime.today().strftime('%Y_%m_%d_') + uuid4().hex[:8]") . ".md"
-    let l:path = g:VIMWIKI_DIR . "/". l:id
-    " return path and id because vimwiki links only need the id but opening
-    " files requires the path
-    return {"path" : l:path, "id" : l:id }
-  endfunction
-  function! s:InsertPNG()
-  " If there is an img in the clipboard save it to
-  " VIMWIKI_DIR/assets/filename_rndmst and insert an image link
-    py from uuid import uuid4
-    let l:avail = system('xclip -selection clipboard -t TARGETS -o')
-    if l:avail =~ 'image/png'
-      let l:file = expand('%:t:r')
-      let l:id = pyeval("uuid4().hex[:5]")
-      let l:link = "assets/" . l:file . '_' . l:id . '.png'
-      let l:path = g:VIMWIKI_DIR . '/' . l:link
-      call system('xclip -selection clipboard -t image/png -o > ' . l:path)
-      echo "Image saved to " . l:path
-      let l:img_link = '![img]('.l:link . ')'
-      put =l:img_link
-    else
-      echo "No image found in clipboard."
-    endif
-  endfunction
-  function! s:MakeLink(name, path)
-    " Use replace to insert a markdown link [a:title](a:file) in the current line.
-    " Don't use bunch of spaces or empty lines as links
-    if a:name != '' && a:name !~? '^\s\+$'
-      let l:pos = s:GetUnderCursor(a:name)
-      call s:ReplaceCoords('['.a:name.']('.a:path.')',l:pos)
-    else
-      echo "Select something to make a link."
-    endif
-  endfunction
-  function! s:LinkHandler()
-    let l:word = expand('<cWORD>')
-    " URL
-    " Little trick: Since url is checked first it handles also things like
-    " ![test](https://img.com) =)
-    let l:match = matchlist(l:word ,'https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\-\?\=]\+')
-    if len(l:match) > 0
-      let l:url = l:match[0]
-      echo l:url 
-      call system('xdg-open ' . shellescape(l:url).' &')
-      return
-    endif
-    " markdown image ![]()
-    let l:match = matchlist(l:word ,'\![.\+\](\(.\+\))')
-    if len(l:match) > 0
-      let l:img = g:VIMWIKI_DIR . '/' . l:match[1]
-      echo l:img 
-      call system('xdg-open ' . shellescape(l:img) . ' &')
-      return
-    endif
-    " markdown link []()
-    let match_link = s:GetUnderCursor('\[.\+\]([^)]\+)')
-    " If current line contains a link follow it 
-    if  match_link.start >= 0
-      " extract groups -> link_name and file_name
-      let l:parts = matchlist(match_link.match, '\[\([^\]]\+\)\](\([^)]\+\))')
-      " matchlist returns [fullmatch, group1, group2,...]
-      let l:title = l:parts[1]
-      let l:file = l:parts[2]
-      " open link takes care of creating the file and allows for going back with backspace
-      call vimwiki#base#open_link("e",l:file)
-      call s:InsertHeader("",l:title)
-      return
-    endif 
-    " None of the above, so create link
-    call s:AddForward()
-  endfunction
-  function! s:AddForward()
-    let l:name = expand('<cWORD>')
-    " create new note and wraps the current word in a markdown link syntax
-    let l:path = s:MakeZettleNote().id
-    call s:MakeLink(l:name, l:path)
-  endfunction
-  function! s:AddBackward()
-    " Create link to alternate-file
-    let l:path = expand('#:t')
-    let l:name = expand('<cWORD>')
-    call s:MakeLink(l:name, l:path)
-  endfunction
+  " =================
+  " UTILITY FUNCTIONS
+  " =================
   " function! ChangeWordUnderCursor(from, to)
   "   let pos = s:GetUnderCursor(a:from)
   "   call ReplaceCoords(a:to, pos)
@@ -302,7 +206,65 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       call setline(line('.'), newline)
     endif
   endfunction
-  function! s:InsertHeader(tag,title)
+  " ==================
+  " HANDLERS FUNCTIONS
+  " ==================
+  function! s:Link_handler()
+    " Overrides the powerfull vimwiki <Enter> mapping to handle zettle-style
+    " notes.
+    " NOTE: Needs to re-implement the link/url handling functionality
+    let l:word = expand('<cWORD>')
+    " URL
+    " Little trick: Since url is checked first it handles also things like
+    " ![test](https://img.com) =)
+    let l:match = matchlist(l:word ,'https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\-\?\=]\+')
+    if len(l:match) > 0
+      let l:url = l:match[0]
+      echo l:url 
+      call system('xdg-open ' . shellescape(l:url).' &')
+      return
+    endif
+    " markdown image ![]()
+    let l:match = matchlist(l:word ,'\![.\+\](\(.\+\))')
+    if len(l:match) > 0
+      let l:img = g:VIMWIKI_DIR . '/' . l:match[1]
+      echo l:img 
+      call system('xdg-open ' . shellescape(l:img) . ' &')
+      return
+    endif
+    " markdown link []()
+    let match_link = s:GetUnderCursor('\[.\+\]([^)]\+)')
+    " If current line contains a link follow it 
+    if  match_link.start >= 0
+      " extract groups -> link_name and file_name
+      let l:parts = matchlist(match_link.match, '\[\([^\]]\+\)\](\([^)]\+\))')
+      " matchlist returns [fullmatch, group1, group2,...]
+      let l:title = l:parts[1]
+      let l:file = l:parts[2]
+      " open link takes care of creating the file and allows for going back with backspace
+      call vimwiki#base#open_link("e",l:file)
+      call s:Insert_header("",l:title)
+      return
+    endif 
+    " None of the above, so create link
+    call s:ForwardLink_handler()
+  endfunction
+  function! s:ForwardLink_handler()
+    let l:name = expand('<cWORD>')
+    " create new note and wraps the current word in a markdown link syntax
+    let l:path = s:Make_zettlenote().id
+    call s:Insert_link(l:name, l:path)
+  endfunction
+  function! s:BackwardLink_handler()
+    " Create link to alternate-file
+    let l:path = expand('#:t')
+    let l:name = expand('<cWORD>')
+    call s:Insert_link(l:name, l:path)
+  endfunction
+  " ================
+  " INSERT FUNCTIONS
+  " ================
+  function! s:Insert_header(tag,title)
   " Insert yaml front matter in empty files
     if line('$') == 1 && getline(1) == ''
       let l:tags = "tags: " . a:tag . "\<CR>"
@@ -313,7 +275,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       normal ggj$
     endif
   endfunction
-  function! s:MakeBib()
+  function! s:Insert_bib()
     if strpart(@+,0,1) == "@"
       normal G
       call append(line('$'), "```bib")
@@ -332,6 +294,55 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       echo "Clipboard doesn't contain bib"
     endif
   endfunction
+  function! s:Insert_PNG()
+  " If there is an img in the clipboard save it to
+  " VIMWIKI_DIR/assets/filename_rndmst and insert an image link
+    py from uuid import uuid4
+    let l:avail = system('xclip -selection clipboard -t TARGETS -o')
+    if l:avail =~ 'image/png'
+      let l:file = expand('%:t:r')
+      let l:id = pyeval("uuid4().hex[:5]")
+      let l:link = "assets/" . l:file . '_' . l:id . '.png'
+      let l:path = g:VIMWIKI_DIR . '/' . l:link
+      call system('xclip -selection clipboard -t image/png -o > ' . l:path)
+      echo "Image saved to " . l:path
+      let l:img_link = '![img]('.l:link . ')'
+      put =l:img_link
+    else
+      echo "No image found in clipboard."
+    endif
+  endfunction
+  function! s:Insert_link(name, path)
+    " Use replace to insert a markdown link [a:title](a:file) in the current line.
+    " Don't use bunch of spaces or empty lines as links
+    if a:name != '' && a:name !~? '^\s\+$'
+      let l:pos = s:GetUnderCursor(a:name)
+      call s:ReplaceCoords('['.a:name.']('.a:path.')',l:pos)
+    else
+      echo "Select something to make a link."
+    endif
+  endfunction
+  function! s:Make_emptynote()
+    execute "e " . <SID>Make_zettlenote()['path']
+    call s:Insert_header("","")
+  endfunction
+  " =============
+  " NOTE CREATION
+  " =============
+  function! s:Make_zettlenote()
+    " Create a new note with a unique name using the date + random string
+    " NOTE: the body of the node is empty, needs to call Insert_header!
+    py from uuid import uuid4
+    py from datetime import datetime
+    let l:id = pyeval("datetime.today().strftime('%Y_%m_%d_') + uuid4().hex[:8]") . ".md"
+    let l:path = g:VIMWIKI_DIR . "/". l:id
+    " return path and id because vimwiki links only need the id but opening
+    " files requires the path
+    return {"path" : l:path, "id" : l:id }
+  endfunction
+  " ========
+  " MAPPINGS
+  " ========
   fun! GoVimwiki()
     " autocmd InsertLeave <buffer> :update
     autocmd BufEnter <buffer> setlocal signcolumn=no
@@ -344,21 +355,18 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " File management mappings
     nmap <buffer> <leader>wd <Plug>VimwikiDeleteFile
     nmap <buffer> <leader>wr <Plug>VimwikiRenameFile
-    nmap <buffer> <leader>wb :call <SID>AddBackward()<CR>
-    nmap <buffer> <leader>wp :call <SID>MakeBib()<CR>
-    nmap <buffer> <leader>wi :call <SID>InsertPNG()<CR>
-    nmap <buffer> <CR> :call <SID>LinkHandler()<CR>
+    nmap <buffer> <leader>wb :call <SID>BackwardLink_handler()<CR>
+    nmap <buffer> <leader>wp :call <SID>Insert_bib()<CR>
+    nmap <buffer> <leader>wi :call <SID>Insert_PNG()<CR>
+    nmap <buffer> <CR> :call <SID>Link_handler()<CR>
   endfun
+  nmap <leader>n :call <SID>Make_emptynote()<CR>
   nmap <Leader>ww <Plug>VimwikiIndex
   augroup vimwikicmds
     autocmd! vimwikicmds
     autocmd FileType vimwiki :call GoVimwiki()
+    autocmd FileType vimwiki :call GoVimwiki_FZF()
   augroup end
-  function! s:OpenNote()
-    execute "e " . <SID>MakeZettleNote()['path']
-    call s:InsertHeader("","")
-  endfunction
-  nmap <leader>n :call <SID>OpenNote()<CR>
   "\<CR>
   " copy the current file name to use it in notes
   " nmap <leader>cpf :let @+ = expand("%:t")<CR>
@@ -547,7 +555,8 @@ Plug 'junegunn/fzf.vim'
   " Always enable preview window on the right with 60% width
   " let g:fzf_preview_window = 'right:60%'
   let g:fzf_layout = {'window': {'height':0.8, 'width':0.8, 'border':'sharp'}}
-  let $FZF_DEFAULT_OPTS='--reverse --preview-window noborder --bind ctrl-a:select-all' " hide broken rounded corners in the inner preview
+  let $FZF_DEFAULT_OPTS='--reverse --preview-window noborder' " hide broken rounded corners in the inner preview
+  let $FZF_DEFAULT_OPTS.=' --bind ctrl-a:select-all,ctrl-d:deselect-all'
   " CTRL-A CTRL-Q to select all and build quickfix list
   " https://github.com/junegunn/fzf.vim/issues/185#issuecomment-322120216
   " Note that g:fzf_action only applies to commands that handle plain file paths (i.e used by fzf#wrap() with arguments without explicit sink). 
@@ -557,8 +566,13 @@ Plug 'junegunn/fzf.vim'
     copen
     cc
   endfunction
+  function! s:test(lines)
+    echo "TEST"
+  endfunction
+  " TODO: why does this work also with other function names? for some reason
+  " the FuncRef methods always implements populating the quickfix list even
+  " setting it to s:test it still populates it
   let g:fzf_action = {
-    \ 'ctrl-q': function('s:build_quickfix_list'),
     \ 'ctrl-t': 'tab split',
     \ 'ctrl-x': 'split',
     \ 'ctrl-v': 'vsplit' }
@@ -576,38 +590,6 @@ Plug 'junegunn/fzf.vim'
     \ 'marker':  ['fg', 'Keyword'],
     \ 'spinner': ['fg', 'Label'],
     \ 'header':  ['fg', 'Comment'] }
-  " Use FZF to search in current file dir with preview
-  " command! -bang -nargs=? -complete=dir Files
-  "     \ call fzf#vim#files(<q-args>, fzf#vim#with_preview(), <bang>0)
-  " Offload interactive search to Rg, use FzF only as a wrapper around it, also add preview
-  " USES FUGITIVE FOR HANDLING GIT
-  function! GitAwarePath()
-    let root = fnamemodify(get(b:, 'git_dir'), ':h')
-    let path = expand('%:p:h')
-    if path[:len(root)-1] ==# root
-      return root
-    endif
-    return path
-  endfunction
-  function! RipgrepFzf(query, fullscreen)
-    " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
-    " line-number is needed for the preview
-    let command_fmt = 'rg --line-number --no-heading --color=always --smart-case %s || true'
-    let initial_command = printf(command_fmt, shellescape(a:query))
-    let reload_command = printf(command_fmt, '{q}')
-    let path = GitAwarePath()
-    echo path
-    let spec = {
-             \ 'options': [ '--phony', 
-                           \ '--query', a:query, 
-                           \ '--bind', 'change:reload:'.reload_command
-                        \ ],
-             \ 'dir':path
-             \ }
-    call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
-  endfunction
-  " Use RipGrep to search inside files
-  command! -nargs=* -bang Rg call RipgrepFzf(<q-args>, <bang>0) 
   " When fzf starts in a terminal buffer, the file type of the buffer is set to fzf. So you can set up FileType fzf autocmd to
   " customize the settings of the window. For example, if you use the default layout ({'down': '~40%'}) on Neovim, you might
   " want to temporarily disable the statusline for a cleaner look.
@@ -616,6 +598,18 @@ Plug 'junegunn/fzf.vim'
     autocmd  FileType fzf set laststatus=0 noshowmode noruler
       \| autocmd BufLeave <buffer> set laststatus=2 showmode ruler
   endif
+  " =================
+  " UTILITY FUNCTIONS
+  " =================
+  function! GitAwarePath()
+    " NOTE: uses FUGITIVE for handling git!
+    let root = fnamemodify(get(b:, 'git_dir'), ':h')
+    let path = expand('%:p:h')
+    if path[:len(root)-1] ==# root
+      return root
+    endif
+    return path
+  endfunction
   " from https://coreyja.com/vim-spelling-suggestions-fzf/#fnref-1 
   function! FzfSpellSink(word)
     exe 'normal! "_ciw'.a:word
@@ -624,33 +618,22 @@ Plug 'junegunn/fzf.vim'
     let suggestions = spellsuggest(expand("<cword>"))
     return fzf#run({'source': suggestions, 'sink': function("FzfSpellSink"), 'down': 10 })
   endfunction
-  command! -bang -nargs=* NoteTags
-  \ call fzf#vim#grep(
-  \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -e ^tags: -- ', 1,
-  \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
-  function! OpenPaper(lines)
-    if len(a:lines) == 1
-      let l:file = split(a:lines,":")[0]
-      " vimwiki open_link based on the default wiki, no need for full path
-      call vimwiki#base#open_link("e",l:file)
-    else
-      let l:qflist = copy(a:lines)
-      let l:qflist =  map(l:qflist, { key, val -> split(val,":")})
-      let l:qflist = map(l:qflist, '{ "filename": v:val[0] , "lnum" : v:val[1] , "text" : join(v:val[3:],"")}')
-      call setqflist(l:qflist)
-      copen
-      cc
-    endif
-  endfunction
   function! InsertAndMove(text)
-      let pos = getpos('.')
-      let line = getline('.')
-      call setline('.', strpart(line, 0, col('.') - 1) . a:text . strpart(line, col('.') - 1))
-      let newcol = col('.') + len(a:text)
-      let pos[2] = newcol
-      call setpos('.', pos)
+    " Insert text at current cursor location and move to end of insert
+    let pos = getpos('.')
+    let line = getline('.')
+    call setline('.', strpart(line, 0, col('.') - 1) . a:text . strpart(line, col('.') - 1))
+    let newcol = col('.') + len(a:text)
+    let pos[2] = newcol
+    call setpos('.', pos)
   endfunction
-  function! CitePaper(lines)
+  " ==================
+  " HANDLERS FUNCTIONS
+  " ==================
+  function! Cite_handler(lines)
+    " insert citations of structure [cite](<path>)
+    " handles multiple lines as :
+    " [cite](<path>),[cite](<path>),[cite](<path>)...
     if len(a:lines) == 1
       let citation= '[cite](' . split(a:lines[0],':')[0] . ')'
       call InsertAndMove(citation)
@@ -663,6 +646,52 @@ Plug 'junegunn/fzf.vim'
       endfor
     endif
   endfunction
+  function! Rg_handler(lines)
+    let l:lines = copy(a:lines)
+    " Not sure why the first element might be ''
+    if l:lines[0] == ''
+      let l:lines = a:lines[1:]
+    endif
+    if len(l:lines) == 1
+      let l:file = split(l:lines[0],":")[0]
+      cclose
+      " vimwiki open_link based on the default wiki, no need for full path
+      call vimwiki#base#open_link("e",l:file)
+    else
+      let l:lines =  map(l:lines, { key, val -> split(val,":")})
+      let l:quickfix = {} " use dictionary to remove duplicates
+      for line in l:lines
+        if !has_key(l:quickfix, line[0])
+          let l:quickfix[line[0]] = l:line
+        endif
+      endfor
+      let l:qflist = map(values(l:quickfix), '{ "filename": v:val[0] , "lnum" : v:val[1] , "text" : join(v:val[3:],"")}')
+      call setqflist(l:qflist)
+      copen
+      cc
+    endif
+  endfunction
+  " ================
+  " SEARCH FUNCTIONS
+  " ================
+  function! RipgrepFZF(query, fullscreen)
+    " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
+    " line-number is needed for the preview
+    let command_fmt = 'rg --line-number --no-heading --color=always --smart-case %s || true'
+    let initial_command = printf(command_fmt, shellescape(a:query))
+    let reload_command = printf(command_fmt, '{q}')
+    let path = GitAwarePath()
+    echo path
+    let spec = { 
+             \ 'sink*' : function('Rg_handler'),
+             \ 'options': [ '--phony', 
+                           \ '--query', a:query, 
+                           \ '--bind', 'change:reload:'.reload_command
+                           \ ],
+             \ 'dir':path
+             \ }
+    call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
+  endfunction
   function! PapersFZF(query, fullscreen, sink)
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
     " line-number/column is needed for the preview
@@ -671,7 +700,7 @@ Plug 'junegunn/fzf.vim'
     let initial_command = printf(command_fmt, shellescape(a:query))
     let reload_command = printf(command_fmt, '{q}')
     " options = 
-    " sink : takes the selected files and opens it in a new buffer
+    " sink*: function to handle the selected files
     " bind : restart rg search when the typed string changes
     " phony: turns off searching with fzf and lets rg do all the work (o.w.
     " fzf would search in the strings returned by rg)
@@ -687,70 +716,102 @@ Plug 'junegunn/fzf.vim'
              \ }
     call fzf#run(fzf#wrap(fzf#vim#with_preview(spec)))
   endfunction
-  command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0, "OpenPaper") 
-  command! -nargs=* -bang Cite call PapersFZF(<q-args>, <bang>0, "CitePaper") 
-  " fzf tags
-  nnoremap <leader>ft :NoteTags<CR>
-  nnoremap <leader>fp :Papers<CR>
-  nnoremap <leader>fc :Cite<CR>
+  function! QfixFZF(query, fullscreen)
+    " Very similar to RipgrepFZF but reads and set the quickfixlist
+    let files = join(map(getqflist(), {key,val -> split(bufname(val.bufnr),'/')[-1]}),' ')
+    echo files
+    let command_fmt = 'rg --line-number --no-heading --color=always --smart-case %s %s || true'
+    let initial_command = printf(command_fmt, shellescape(a:query), files)
+    let reload_command = printf(command_fmt, '{q}', files)
+    let spec = {
+             \ 'sink*' : function('Rg_handler'),
+             \ 'options': [ '--phony', 
+                           \ '--query', a:query, 
+                           \ '--bind', 'change:reload:'.reload_command
+                        \ ],
+             \ 'dir':g:VIMWIKI_DIR
+             \ }
+    call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
+  endfunction
+  " ============
+  " FZF COMMANDS
+  " ============
+  command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0, "Rg_handler") 
+  command! -nargs=* -bang Cite call PapersFZF(<q-args>, <bang>0, "Cite_handler") 
+  command! -nargs=* -bang Rg call RipgrepFZF(<q-args>, <bang>0) 
+  command! -nargs=* -bang Qf call QfixFZF(<q-args>, <bang>0) 
+  command! -bang -nargs=* NoteTags
+  \ call fzf#vim#grep(
+  \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -e ^tags: -- ', 1,
+  \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
+  " ============
+  " FZF MAPPINGS
+  " ============
   nnoremap <leader>fd :call FzfSpell()<CR>
   nnoremap <leader>ff :Files<CR>
   nnoremap <leader>fb :Buffers<CR>
   nnoremap <leader>fl :Lines<CR>
-  nnoremap <leader>fg :Rg<CR>
+  nnoremap <leader>fr :Rg<CR>
   nnoremap <leader>fw :Rg <C-R><C-W><CR>
+  " Vimwiki specific bindings that use FZF
+  function! GoVimwiki_FZF()
+    nnoremap <buffer> <leader>ft :NoteTags<CR>
+    nnoremap <buffer> <leader>fq :Qf<CR>
+    nnoremap <buffer> <leader>fp :Papers<CR>
+    nnoremap <buffer> <leader>fc :Cite<CR>
+  endfunction
 
-Plug 'liuchengxu/vim-which-key'
-  set timeout
-  set timeoutlen=500
-  " added two spaces because the vsplit was cutting the last 2 chars
-  let g:which_key_map = {
-        \ '-' : 'Close buffer  ',
-        \ '=' : 'Open scratchpad  ',
-        \ 'c' : 'Open init.vim  ',
-        \ 'd' : 'Put date Y-m-d  ',
-        \ 'e' : 'Exec curr line as bash  ',
-        \ 'g' : 'Get line  ',
-        \ 'l' : 'Dictionary lookup  ',
-        \ 'm' : 'Toggle md preview  ',
-        \ 'n' : 'Create new note  ',
-        \ 'p' : '<C-^>  ',
-        \ 'q' : 'Quit  ',
-        \ 's' : 'Save  ',
-        \ }
-  let g:which_key_map.w = {
-        \ 'name' : '+vimwiki  ',
-        \ 'b' : 'Backward link  ',
-        \ 'd' : 'Delete file  ',
-        \ 'i' : 'Insert png from clipboard ',
-        \ 'p' : 'Insert paper .bib  ',
-        \ 'r' : 'Rename file  ',
-        \ 'w' : 'Open index  ',
-        \ }
-  let g:which_key_map.f = {
-        \ 'name' : '+fzf  ',
-        \ 'b' : 'Buffers  ',
-        \ 'c' : 'Cite  ',
-        \ 'd' : 'Dictionary  ',
-        \ 'f' : 'Files  ',
-        \ 'g' : 'RipGrep  ',
-        \ 'l' : 'Lines  ',
-        \ 't' : 'List notes, search tags  ',
-        \ 'w' : 'RipGrep curr word  ',
-        \ }
-  " the horiz floating bar is an ugly grey wall
-  " the keys are also too spaced out to scan easily
-  " Using a separate vertical stplit is much better
-  let g:which_key_vertical = 1
-  let g:which_key_use_floating_win = 0
-  let g:which_key_position = 'topleft'
-  autocmd! FileType which_key
-  autocmd  FileType which_key set laststatus=0 noshowmode noruler
-    \| autocmd BufLeave <buffer> set laststatus=2 showmode ruler
-  nnoremap <silent> <leader> :<c-u>WhichKey '<Space>'<CR>
-  " vnoremap <silent> <leader> :<c-u>WhichKeyVisual '<Space>'<CR>
-  " ADD register after the Plug end
-  " call which_key#register('<Space>', "g:which_key_map")
+" Plug 'liuchengxu/vim-which-key'
+"   set timeout
+"   set timeoutlen=500
+"   " added two spaces because the vsplit was cutting the last 2 chars
+"   let g:which_key_map = {
+"         \ '-' : 'Close buffer  ',
+"         \ '=' : 'Open scratchpad  ',
+"         \ 'c' : 'Open init.vim  ',
+"         \ 'd' : 'Put date Y-m-d  ',
+"         \ 'e' : 'Exec curr line as bash  ',
+"         \ 'g' : 'Get line  ',
+"         \ 'l' : 'Dictionary lookup  ',
+"         \ 'm' : 'Toggle md preview  ',
+"         \ 'n' : 'Create new note  ',
+"         \ 'p' : '<C-^>  ',
+"         \ 'q' : 'Quit  ',
+"         \ 's' : 'Save  ',
+"         \ }
+"   let g:which_key_map.w = {
+"         \ 'name' : '+vimwiki  ',
+"         \ 'b' : 'Backward link  ',
+"         \ 'd' : 'Delete file  ',
+"         \ 'i' : 'Insert png from clipboard ',
+"         \ 'p' : 'Insert paper .bib  ',
+"         \ 'r' : 'Rename file  ',
+"         \ 'w' : 'Open index  ',
+"         \ }
+"   let g:which_key_map.f = {
+"         \ 'name' : '+fzf  ',
+"         \ 'b' : 'Buffers  ',
+"         \ 'c' : 'Cite  ',
+"         \ 'd' : 'Dictionary  ',
+"         \ 'f' : 'Files  ',
+"         \ 'l' : 'Lines  ',
+"         \ 'r' : 'RipGrep  ',
+"         \ 't' : 'List notes, search tags  ',
+"         \ 'w' : 'RipGrep curr word  ',
+"         \ }
+"   " the horiz floating bar is an ugly grey wall
+"   " the keys are also too spaced out to scan easily
+"   " Using a separate vertical stplit is much better
+"   let g:which_key_vertical = 1
+"   let g:which_key_use_floating_win = 0
+"   let g:which_key_position = 'topleft'
+"   autocmd! FileType which_key
+"   autocmd  FileType which_key set laststatus=0 noshowmode noruler
+"     \| autocmd BufLeave <buffer> set laststatus=2 showmode ruler
+"   nnoremap <silent> <leader> :<c-u>WhichKey '<Space>'<CR>
+"   " vnoremap <silent> <leader> :<c-u>WhichKeyVisual '<Space>'<CR>
+"   " ADD register after the Plug end
+"   " call which_key#register('<Space>', "g:which_key_map")
 
 Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
   set nohlsearch " easymotion will do the highlighting
@@ -808,7 +869,7 @@ Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
 
-call which_key#register('<Space>', "g:which_key_map")
+" call which_key#register('<Space>', "g:which_key_map")
 
 " }}}
 " ============================================================================
@@ -915,8 +976,40 @@ let g:python_host_prog="/home/lapo/miniconda3/envs/neovim2/bin/python"
 
 " }}}
 " ============================================================================
+" Utilities {{{
+" ============================================================================
+
+function! s:GetVisualSelection()
+  " I think you can guess what this one does
+  let [line_start, column_start] = getpos("'<")[1:2]
+  let [line_end, column_end] = getpos("'>")[1:2]
+  let lines = getline(line_start, line_end)
+  if len(lines) == 0
+      return ''
+  endif
+  let lines[-1] = lines[-1][: column_end - (&selection == 'inclusive' ? 1 : 2)]
+  let lines[0] = lines[0][column_start - 1:]
+  return join(lines, "\n")
+endfunction
+function! QuickfixFilenames()
+  " Building a hash ensures we get each buffer only once
+  let buffer_numbers = {}
+  for quickfix_item in getqflist()
+    let buffer_numbers[quickfix_item['bufnr']] = bufname(quickfix_item['bufnr'])
+  endfor
+  return join(values(buffer_numbers))
+endfunction
+
+" }}}
+" ============================================================================
 " Mappings {{{
 " ============================================================================
+
+" https://salferrarello.com/vim-close-all-buffers-except-the-current-one/
+command! Bonly execute '%bdelete|edit #|normal `"'
+
+" http://vimcasts.org/episodes/project-wide-find-and-replace/
+command! -nargs=0 -bar Qargs execute 'args ' . QuickfixFilenames()
 
 " Available in tpope/vim-unimpaired's ]e/[e
 " function! s:QuickGetLine(off)
