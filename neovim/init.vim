@@ -27,7 +27,6 @@ sunmap <Space>
 let mapleader=' '
 let maplocalleader=' '
 
-
 " }}}
 " ============================================================================
 " Plugins {{{
@@ -165,47 +164,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
                         \ 'auto_diary_index': 1,
                         \ 'custom_wiki2html': '/home/lapo/dotfiles/neovim/wiki2html.sh'}]
   let g:VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
-  " =================
-  " UTILITY FUNCTIONS
-  " =================
-  " function! ChangeWordUnderCursor(from, to)
-  "   let pos = s:GetUnderCursor(a:from)
-  "   call ReplaceCoords(a:to, pos)
-  " endfunction
-  function! s:GetUnderCursor(pattern)
-  " Return the match under the cursor. Yeah, it's a pain
-    let col = col('.') - 1
-    let line = getline('.')
-    let found = ''
-    let ebeg = -1
-    let elen = 0
-    " match( ..., 0) return col of first match
-    let cont = match(line, a:pattern, 0)
-    " search until the cursor is within the match
-    while (ebeg >= 0 || (0 <= cont) && (cont <= col))
-      let contn = matchend(line, a:pattern, cont)
-      if (cont <= col) && (col < contn)
-        let ebeg = match(line, a:pattern, cont)
-        let elen = contn - ebeg
-        let found = strpart(line, ebeg, elen)
-        break
-      else
-        let cont = match(line, a:pattern, contn)
-        let found = ''
-      endif
-    endwh
-    return {'match' : found, 'start' : ebeg, 'len' : elen}
-  endfunction
-  function! s:ReplaceCoords(insert, pos)
-  " Replaces the text between pos.start and pos.start + pos.len with insert
-    if a:pos.start >= 0
-      let line = getline('.')
-      let from = a:pos.start
-      let to = a:pos.start + a:pos.len
-      let newline = strpart(line, 0, from).a:insert.strpart(line, to)
-      call setline(line('.'), newline)
-    endif
-  endfunction
+  let g:vimwiki_tag_format = {'pre_mark': '#', 'post_mark': '#', 'sep': ':'}
   " ==================
   " HANDLERS FUNCTIONS
   " ==================
@@ -270,7 +229,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       let l:tags = "tags: " . a:tag . "\<CR>"
       let l:title = "title: " . a:title . "\<CR>"
       let l:date = "date: " . system('date --iso-8601=seconds')
-      let l:header = "--- \<CR>" . l:tags . l:title . l:date . "--- \<CR>"
+      let l:header = "---\<CR>" . l:tags . l:title . l:date . "---\<CR>"
       execute "normal! ggi" . l:header
       normal ggj$
     endif
@@ -340,12 +299,47 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " files requires the path
     return {"path" : l:path, "id" : l:id }
   endfunction
+  let s:CiteWin = -1
+  function! s:Popup_cite()
+    let search = s:GetUnderCursor('\[cite\](\([^)]\+\.md\))')
+    call s:Popup_cite_close()
+    if search.match != ''
+      if s:CiteWin < 0
+        let file = matchlist(search.match, '\[cite\](\([^)]\+\.md\))')[1]
+        let path = g:VIMWIKI_DIR . '/' . l:file
+        if filereadable(l:path)
+          let line = readfile(l:path, '', 3)[-1]
+          let title = matchlist(l:line ,'^title: \(.*\)')
+          if len(l:title) > 1
+            call s:Popup_cite_open(l:title[1])
+          endif
+        endif
+      endif
+    endif
+  endfunction
+  function! s:Popup_cite_open(txt)
+    let buf = nvim_create_buf(v:false, v:true)
+    call nvim_buf_set_lines(buf, 0, -1, v:true, [a:txt])
+    let opts = {'relative': 'win', 'width': len(a:txt), 'height': 1, 'col': wincol()-1,
+        \ 'row': winline()-2, 'anchor': 'NW', 'style': 'minimal'}
+    let win = nvim_open_win(buf, 0, opts)
+    " optional: change highlight, otherwise Pmenu is used
+    call nvim_win_set_option(win, 'winhl', 'Normal:ErrorMsg')
+    let s:CiteWin = win
+  endfunction
+  function! s:Popup_cite_close()
+    if s:CiteWin > 0
+      call nvim_win_close(s:CiteWin,0)
+      let s:CiteWin = -1
+    endif
+  endfunction
   " ========
   " MAPPINGS
   " ========
   fun! GoVimwiki()
     " autocmd InsertLeave <buffer> :update
     autocmd BufEnter <buffer> setlocal signcolumn=no
+    autocmd! CursorMoved * call s:Popup_cite()
     " Link navigation mappings
     nmap <buffer> <TAB> <Plug>VimwikiNextLink
     nmap <buffer> <S-TAB> <Plug>VimwikiPrevLink
@@ -979,6 +973,44 @@ let g:python_host_prog="/home/lapo/miniconda3/envs/neovim2/bin/python"
 " Utilities {{{
 " ============================================================================
 
+" function! ChangeWordUnderCursor(from, to)
+"   let pos = s:GetUnderCursor(a:from)
+"   call ReplaceCoords(a:to, pos)
+" endfunction
+function! s:GetUnderCursor(pattern)
+" Return the match under the cursor. Yeah, it's a pain
+  let col = col('.') - 1
+  let line = getline('.')
+  let found = ''
+  let ebeg = -1
+  let elen = 0
+  " match( ..., 0) return col of first match
+  let cont = match(line, a:pattern, 0)
+  " search until the cursor is within the match
+  while (ebeg >= 0 || (0 <= cont) && (cont <= col))
+    let contn = matchend(line, a:pattern, cont)
+    if (cont <= col) && (col < contn)
+      let ebeg = match(line, a:pattern, cont)
+      let elen = contn - ebeg
+      let found = strpart(line, ebeg, elen)
+      break
+    else
+      let cont = match(line, a:pattern, contn)
+      let found = ''
+    endif
+  endwh
+  return {'match' : found, 'start' : ebeg, 'len' : elen}
+endfunction
+function! s:ReplaceCoords(insert, pos)
+" Replaces the text between pos.start and pos.start + pos.len with insert
+  if a:pos.start >= 0
+    let line = getline('.')
+    let from = a:pos.start
+    let to = a:pos.start + a:pos.len
+    let newline = strpart(line, 0, from).a:insert.strpart(line, to)
+    call setline(line('.'), newline)
+  endif
+endfunction
 function! s:GetVisualSelection()
   " I think you can guess what this one does
   let [line_start, column_start] = getpos("'<")[1:2]
@@ -991,7 +1023,7 @@ function! s:GetVisualSelection()
   let lines[0] = lines[0][column_start - 1:]
   return join(lines, "\n")
 endfunction
-function! QuickfixFilenames()
+function! s:QuickfixNames()
   " Building a hash ensures we get each buffer only once
   let buffer_numbers = {}
   for quickfix_item in getqflist()
@@ -1009,7 +1041,7 @@ endfunction
 command! Bonly execute '%bdelete|edit #|normal `"'
 
 " http://vimcasts.org/episodes/project-wide-find-and-replace/
-command! -nargs=0 -bar Qargs execute 'args ' . QuickfixFilenames()
+command! -nargs=0 -bar Qargs execute 'args ' . s:QuickfixNames()
 
 " Available in tpope/vim-unimpaired's ]e/[e
 " function! s:QuickGetLine(off)
@@ -1055,7 +1087,7 @@ function! s:ToggleScratchpad()
   if l:file ==? "buffer.md"
     bd
   else
-    e ~/buffer.md
+    execute "e " . g:VIMWIKI_DIR . "/buffer.md"
   endif
 endfunction
 nnoremap <leader>= :call <SID>ToggleScratchpad()<CR>
