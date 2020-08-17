@@ -675,10 +675,13 @@ Plug 'junegunn/fzf.vim'
     " returns the vimwiki files that contain links to the current file
     let node = expand("%:t")
     let pattern = "\\[.+\\]\\(" . l:node . "\\)"
-    echo pattern
     let command_fmt = 'rg --no-heading --sortr=modified %s '
     let cmd = printf("cd " . g:VIMWIKI_DIR . " && " . command_fmt, shellescape(l:pattern))
     let files = map(split(system(cmd), '\n'), {key,val -> split(v:val,':')[0]})
+    if len(files) == 0
+      let g:handler_error = 1
+      let g:handler_msg = "No incoming edges found"
+    endif
     return join(UniqList(l:files), ' ')
   endfunction
   function! Outgoing_handler()
@@ -695,6 +698,10 @@ Plug 'junegunn/fzf.vim'
     let pattern = '\[[^\]]\+\]([0-9]\+_[0-9]\+_[0-9]\+_[a-z0-9]\+.md)'
     let hits = AllMatches(l:text, l:pattern)
     let files = map(hits, {key,val -> matchlist(v:val,'\[\([^\]]\+\)\](\([^)]\+\))')[2]})
+    if len(files) == 0
+      let g:handler_error = 1
+      let g:handler_msg = "No outgoing edges found"
+    endif
     return join(UniqList(l:files), ' ')
   endfunction
   " ================
@@ -703,20 +710,26 @@ Plug 'junegunn/fzf.vim'
   function! RipgrepFZF(query, fullscreen, sink, files)
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
     " line-number is needed for the preview
-    let command_fmt = 'rg --line-number --no-heading --sortr=modified --color=always --smart-case %s %s || true'
-    let initial_command = printf(command_fmt, shellescape(a:query), a:files)
-    let reload_command = printf(command_fmt, '{q}', a:files)
-    let path = GitAwarePath()
-    let spec = { 
-             \ 'source' : initial_command,
-             \ 'sink*' : function(a:sink),
-             \ 'options':[ '--bind', 'change:reload:' . reload_command,
-                         \ '--phony',
-                         \ '--ansi',
-                         \ '--multi'],
-             \ 'dir':path
-             \ }
-    call fzf#run(fzf#wrap(fzf#vim#with_preview(spec)))
+    if g:handler_error
+      echohl WarningMsg | echo g:handler_msg  | echohl None
+      let g:handler_error = 0
+      let g:handler_msg = ""
+    else
+      let command_fmt = 'rg --line-number --no-heading --sortr=modified --color=always --smart-case %s %s || true'
+      let initial_command = printf(command_fmt, shellescape(a:query), a:files)
+      let reload_command = printf(command_fmt, '{q}', a:files)
+      let path = GitAwarePath()
+      let spec = { 
+               \ 'source' : initial_command,
+               \ 'sink*' : function(a:sink),
+               \ 'options':[ '--bind', 'change:reload:' . reload_command,
+                           \ '--phony',
+                           \ '--ansi',
+                           \ '--multi'],
+               \ 'dir':path
+               \ }
+      call fzf#run(fzf#wrap(fzf#vim#with_preview(spec)))
+    endif
   endfunction
 
   function! PapersFZF(query, fullscreen, sink)
