@@ -665,27 +665,60 @@ Plug 'junegunn/fzf.vim'
       cc
     endif
   endfunction
+  function! Qfix_handler()
+    " returns the list of files in the quickfix list, items in the list are
+    " assumed to be unique (enforced by populating it with the Rg_handler)
+    let files = join(map(getqflist(), {key,val -> split(bufname(val.bufnr),'/')[-1]}),' ')
+    return files
+  endfunction
+  function! Incoming_handler()
+    " returns the vimwiki files that contain links to the current file
+    let node = expand("%:t")
+    let pattern = "\\[.+\\]\\(" . l:node . "\\)"
+    echo pattern
+    let command_fmt = 'rg --no-heading --sortr=modified %s '
+    let cmd = printf("cd " . g:VIMWIKI_DIR . " && " . command_fmt, shellescape(l:pattern))
+    let files = map(split(system(cmd), '\n'), {key,val -> split(v:val,':')[0]})
+    return join(UniqList(l:files), ' ')
+  endfunction
+  function! Outgoing_handler()
+    " from https://vim.fandom.com/wiki/Copy_search_matches
+    " 1. clear register a
+    " 2. search for lines matching (title)[year_month_day_id.md]
+    " 3. use some vim magic to store the matches in hits
+    " normal qaq
+    " g/\[.\+\]([0-9]\+_[0-9]\+_[0-9]\+_[a-z0-9]\+.md)/y A
+    " let hits = []
+    " " how this does what it does is beyond me
+    " %s//\=len(add(hits, submatch(0))) ? submatch(0) : ''/gne
+    let text = join(getline(1,"$"),"\n")
+    let pattern = '\[[^\]]\+\]([0-9]\+_[0-9]\+_[0-9]\+_[a-z0-9]\+.md)'
+    let hits = AllMatches(l:text, l:pattern)
+    let files = map(hits, {key,val -> matchlist(v:val,'\[\([^\]]\+\)\](\([^)]\+\))')[2]})
+    return join(UniqList(l:files), ' ')
+  endfunction
   " ================
   " SEARCH FUNCTIONS
   " ================
-  function! RipgrepFZF(query, fullscreen)
+  function! RipgrepFZF(query, fullscreen, sink, files)
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
     " line-number is needed for the preview
-    let command_fmt = 'rg --line-number --no-heading --color=always --smart-case %s || true'
-    let initial_command = printf(command_fmt, shellescape(a:query))
-    let reload_command = printf(command_fmt, '{q}')
+    let command_fmt = 'rg --line-number --no-heading --sortr=modified --color=always --smart-case %s %s || true'
+    let initial_command = printf(command_fmt, shellescape(a:query), a:files)
+    let reload_command = printf(command_fmt, '{q}', a:files)
     let path = GitAwarePath()
-    echo path
     let spec = { 
-             \ 'sink*' : function('Rg_handler'),
-             \ 'options': [ '--phony', 
-                           \ '--query', a:query, 
-                           \ '--bind', 'change:reload:'.reload_command
-                           \ ],
+             \ 'source' : initial_command,
+             \ 'sink*' : function(a:sink),
+             \ 'options':[ '--bind', 'change:reload:' . reload_command,
+                         \ '--phony',
+                         \ '--ansi',
+                         \ '--multi'],
              \ 'dir':path
              \ }
-    call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
+    call fzf#run(fzf#wrap(fzf#vim#with_preview(spec)))
   endfunction
+
   function! PapersFZF(query, fullscreen, sink)
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
     " line-number/column is needed for the preview
@@ -710,31 +743,20 @@ Plug 'junegunn/fzf.vim'
              \ }
     call fzf#run(fzf#wrap(fzf#vim#with_preview(spec)))
   endfunction
-  function! QfixFZF(query, fullscreen)
-    " Very similar to RipgrepFZF but reads and set the quickfixlist
-    let files = join(map(getqflist(), {key,val -> split(bufname(val.bufnr),'/')[-1]}),' ')
-    echo files
-    let command_fmt = 'rg --line-number --no-heading --color=always --smart-case %s %s || true'
-    let initial_command = printf(command_fmt, shellescape(a:query), files)
-    let reload_command = printf(command_fmt, '{q}', files)
-    let spec = {
-             \ 'sink*' : function('Rg_handler'),
-             \ 'options': [ '--phony', 
-                           \ '--query', a:query, 
-                           \ '--bind', 'change:reload:'.reload_command
-                        \ ],
-             \ 'dir':g:VIMWIKI_DIR
-             \ }
-    call fzf#vim#grep(initial_command, 1, fzf#vim#with_preview(spec), a:fullscreen)
-  endfunction
   " ============
   " FZF COMMANDS
   " ============
+  " function WhereAmI(loc)
+  "   echo "I'm in " . a:loc
+  " endfunction
   command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0, "Rg_handler") 
   command! -nargs=* -bang Cite call PapersFZF(<q-args>, <bang>0, "Cite_handler") 
-  command! -nargs=* -bang Rg call RipgrepFZF(<q-args>, <bang>0) 
-  command! -nargs=* -bang Qf call QfixFZF(<q-args>, <bang>0) 
-  command! -bang -nargs=* NoteTags
+  command! -nargs=* -bang Rg call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", "") 
+  command! -nargs=* -bang Qf call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", Qfix_handler()) 
+  command! -nargs=* -bang Incoming call RipgrepFZF("^title: ", 0, "Rg_handler", Incoming_handler())
+  command! -nargs=* -bang Outgoing call RipgrepFZF("^title: ", 0, "Rg_handler", Outgoing_handler())
+  " command! -nargs=* -bang Test call WhereAmI(expand("%h"))
+  command! -bang -nargs=* TagsFZF
   \ call fzf#vim#grep(
   \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -e ^tags: -- ', 1,
   \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
@@ -749,10 +771,12 @@ Plug 'junegunn/fzf.vim'
   nnoremap <leader>fw :Rg <C-R><C-W><CR>
   " Vimwiki specific bindings that use FZF
   function! GoVimwiki_FZF()
-    nnoremap <buffer> <leader>ft :NoteTags<CR>
+    nnoremap <buffer> <leader>ft :TagsFZF<CR>
     nnoremap <buffer> <leader>fq :Qf<CR>
     nnoremap <buffer> <leader>fp :Papers<CR>
     nnoremap <buffer> <leader>fc :Cite<CR>
+    nnoremap <buffer> <leader>fi :Incoming<CR>
+    nnoremap <buffer> <leader>fo :Outgoing<CR>
   endfunction
 
 " Plug 'liuchengxu/vim-which-key'
@@ -973,6 +997,31 @@ let g:python_host_prog="/home/lapo/miniconda3/envs/neovim2/bin/python"
 " Utilities {{{
 " ============================================================================
 
+function AllMatches(text,pattern)
+  let matches = []
+  let cursor = 0
+  let safety = 0
+  let [matched,startpos,endpos] = matchstrpos(a:text,a:pattern,cursor)
+  while matched != ""
+    call add(matches, matched) 
+    let cursor = endpos
+    let [matched,startpos,endpos] = matchstrpos(a:text,a:pattern,cursor)
+    let safety += 1
+    if safety > 10000
+      break
+    endif
+  endwhile
+  return matches
+endfunction
+function! UniqList(list)
+  " return a list that contains only unique strings
+  let dict = {}
+  for l in a:list
+     let l:dict[l] = ''
+  endfor
+  let uniqueList = keys(l:dict)
+  return uniqueList
+endfunction
 " function! ChangeWordUnderCursor(from, to)
 "   let pos = s:GetUnderCursor(a:from)
 "   call ReplaceCoords(a:to, pos)
