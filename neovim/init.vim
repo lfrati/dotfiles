@@ -624,6 +624,8 @@ Plug 'junegunn/fzf.vim'
   " ==================
   " HANDLERS FUNCTIONS
   " ==================
+  let g:fzf_handler_error = 0
+  let g:fzf_handler_msg = ""
   function! Cite_handler(lines)
     " insert citations of structure [cite](<path>)
     " handles multiple lines as :
@@ -679,8 +681,8 @@ Plug 'junegunn/fzf.vim'
     let cmd = printf("cd " . g:VIMWIKI_DIR . " && " . command_fmt, shellescape(l:pattern))
     let files = map(split(system(cmd), '\n'), {key,val -> split(v:val,':')[0]})
     if len(files) == 0
-      let g:handler_error = 1
-      let g:handler_msg = "No incoming edges found"
+      let g:fzf_handler_error = 1
+      let g:fzf_handler_msg = "No incoming edges found"
     endif
     return join(UniqList(l:files), ' ')
   endfunction
@@ -699,8 +701,8 @@ Plug 'junegunn/fzf.vim'
     let hits = AllMatches(l:text, l:pattern)
     let files = map(hits, {key,val -> matchlist(v:val,'\[\([^\]]\+\)\](\([^)]\+\))')[2]})
     if len(files) == 0
-      let g:handler_error = 1
-      let g:handler_msg = "No outgoing edges found"
+      let g:fzf_handler_error = 1
+      let g:fzf_handler_msg = "No outgoing edges found"
     endif
     return join(UniqList(l:files), ' ')
   endfunction
@@ -710,12 +712,12 @@ Plug 'junegunn/fzf.vim'
   function! RipgrepFZF(query, fullscreen, sink, files)
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
     " line-number is needed for the preview
-    if g:handler_error
-      echohl WarningMsg | echo g:handler_msg  | echohl None
-      let g:handler_error = 0
-      let g:handler_msg = ""
+    if g:fzf_handler_error
+      echohl WarningMsg | echo g:fzf_handler_msg  | echohl None
+      let g:fzf_handler_error = 0
+      let g:fzf_handler_msg = ""
     else
-      let command_fmt = 'rg --line-number --no-heading --sortr=modified --color=always --smart-case %s %s || true'
+      let command_fmt = 'rg --line-number --no-heading --sortr=modified -T jupyter --color=always --smart-case %s %s || true'
       let initial_command = printf(command_fmt, shellescape(a:query), a:files)
       let reload_command = printf(command_fmt, '{q}', a:files)
       let path = GitAwarePath()
