@@ -354,7 +354,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     nmap <buffer> <leader>wi :call <SID>Insert_PNG()<CR>
     nmap <buffer> <CR> :call <SID>Link_handler()<CR>
   endfun
-  nmap <leader>n :call <SID>Make_emptynote()<CR>
+  nmap <leader>wn :call <SID>Make_emptynote()<CR>
   nmap <Leader>ww <Plug>VimwikiIndex
   augroup vimwikicmds
     autocmd! vimwikicmds
@@ -670,7 +670,7 @@ Plug 'junegunn/fzf.vim'
   function! Qfix_handler()
     " returns the list of files in the quickfix list, items in the list are
     " assumed to be unique (enforced by populating it with the Rg_handler)
-    let files = join(map(getqflist(), {key,val -> split(bufname(val.bufnr),'/')[-1]}),' ')
+    let files = join(map(getqflist(), {key,val -> split(bufname(val.bufnr),'/')[-1]}))
     return files
   endfunction
   function! Incoming_handler()
@@ -684,7 +684,7 @@ Plug 'junegunn/fzf.vim'
       let g:fzf_handler_error = 1
       let g:fzf_handler_msg = "No incoming edges found"
     endif
-    return join(UniqList(l:files), ' ')
+    return join(UniqList(l:files))
   endfunction
   function! Outgoing_handler()
     " from https://vim.fandom.com/wiki/Copy_search_matches
@@ -704,7 +704,50 @@ Plug 'junegunn/fzf.vim'
       let g:fzf_handler_error = 1
       let g:fzf_handler_msg = "No outgoing edges found"
     endif
-    return join(UniqList(l:files), ' ')
+    return join(UniqList(l:files))
+  endfunction
+  " Keep track of buffers visited inside the vimwiki (using a filetype based
+  " autocmd)
+  let g:buff_hist = []
+  let g:buff_hist_size = 10
+  function! BuffHist_update()
+    let l:bufname = bufname()
+    if l:bufname != ''
+      " if the buffer corresponds to a markdown file add it to the list
+      " the filetype check should ensure this, but just to be sure
+      let l:bufname = fnamemodify(bufname(),":t")
+      if len(g:buff_hist) == 0 
+        let g:buff_hist = [l:bufname]
+      elseif l:bufname != g:buff_hist[0]
+        " avoid adding duplicate entries by leaving/re-entering the same buff
+        let g:buff_hist = [l:bufname] + g:buff_hist
+      endif
+      if len(g:buff_hist) > g:buff_hist_size + 1
+        " keep buffer list size under control
+        let g:buff_hist = g:buff_hist[: g:buff_hist_size]
+        echo len(g:buff_hist)
+      endif
+    endif
+  endfunction
+  function! BuffHist_handler()
+    let l:files_list = ""
+    if len(g:buff_hist) < 2
+      let g:fzf_handler_error = 1
+      let g:fzf_handler_msg = "Not enough files in history."
+    else
+      let l:files_list = join(g:buff_hist[1:])
+    endif
+    return l:files_list
+  endfunction 
+  function! FZFLink_handler(lines)
+    " Create link to alternate-file
+    if len(a:lines) == 1
+      let l:path = split(a:lines[0],":")[0]      
+      let l:name = expand('<cWORD>')
+      call s:Insert_link(l:name, l:path)
+    else
+      echo "Select ONE file."
+    endif
   endfunction
   " ================
   " SEARCH FUNCTIONS
@@ -733,7 +776,6 @@ Plug 'junegunn/fzf.vim'
       call fzf#run(fzf#wrap(fzf#vim#with_preview(spec)))
     endif
   endfunction
-
   function! PapersFZF(query, fullscreen, sink)
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
     " line-number/column is needed for the preview
@@ -770,6 +812,7 @@ Plug 'junegunn/fzf.vim'
   command! -nargs=* -bang Qf call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", Qfix_handler()) 
   command! -nargs=* -bang Incoming call RipgrepFZF("^title: ", 0, "Rg_handler", Incoming_handler())
   command! -nargs=* -bang Outgoing call RipgrepFZF("^title: ", 0, "Rg_handler", Outgoing_handler())
+  command! -nargs=* -bang RecentNotes call RipgrepFZF("^title: ", 0, "FZFLink_handler", BuffHist_handler())
   " command! -nargs=* -bang Test call WhereAmI(expand("%h"))
   command! -bang -nargs=* TagsFZF
   \ call fzf#vim#grep(
@@ -792,7 +835,10 @@ Plug 'junegunn/fzf.vim'
     nnoremap <buffer> <leader>fc :Cite<CR>
     nnoremap <buffer> <leader>fi :Incoming<CR>
     nnoremap <buffer> <leader>fo :Outgoing<CR>
+    nnoremap <buffer> <leader>fl :RecentNotes<CR>
   endfunction
+  autocmd  FileType vimwiki 
+  \| autocmd BufEnter <buffer> call BuffHist_update()
 
 " Plug 'liuchengxu/vim-which-key'
 "   set timeout
