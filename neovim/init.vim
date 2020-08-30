@@ -235,6 +235,8 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     endif
   endfunction
   function! s:Insert_bib()
+    " check beginning of content of copy register (+)
+    " to see if it is @ (beginning of bib entry)
     if strpart(@+,0,1) == "@"
       normal G
       call append(line('$'), "```bib")
@@ -281,14 +283,14 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       echo "Select something to make a link."
     endif
   endfunction
-  function! s:Make_emptynote()
-    execute "e " . <SID>Make_zettlenote()['path']
+  function! Make_emptynote()
+    execute "e " . Make_zettlenote()['path']
     call s:Insert_header("","")
   endfunction
   " =============
   " NOTE CREATION
   " =============
-  function! s:Make_zettlenote()
+  function! Make_zettlenote()
     " Create a new note with a unique name using the date + random string
     " NOTE: the body of the node is empty, needs to call Insert_header!
     py from uuid import uuid4
@@ -301,11 +303,12 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   endfunction
   let s:CiteWin = -1
   function! s:Popup_cite()
-    let search = s:GetUnderCursor('\[cite\](\([^)]\+\.md\))')
     call s:Popup_cite_close()
+    " use non-greedy match \{-} to select the content of square brackets
+    let search = s:GetUnderCursor('\[.\{-}\](\([^)]\+\.md\))')
     if search.match != ''
       if s:CiteWin < 0
-        let file = matchlist(search.match, '\[cite\](\([^)]\+\.md\))')[1]
+        let file = matchlist(search.match, '\[.\{-}\](\([^)]\+\.md\))')[1]
         let path = g:VIMWIKI_DIR . '/' . l:file
         if filereadable(l:path)
           let line = readfile(l:path, '', 3)[-1]
@@ -339,7 +342,9 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   fun! GoVimwiki()
     " autocmd InsertLeave <buffer> :update
     autocmd BufEnter <buffer> setlocal signcolumn=no
-    autocmd! CursorMoved * call s:Popup_cite()
+    " autocmd! CursorMoved *.md call s:Popup_cite()
+    autocmd! CursorMoved *.md call s:Popup_cite_close()
+    autocmd! CursorHold *.md call s:Popup_cite()
     " Link navigation mappings
     nmap <buffer> <TAB> <Plug>VimwikiNextLink
     nmap <buffer> <S-TAB> <Plug>VimwikiPrevLink
@@ -349,19 +354,21 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " File management mappings
     nmap <buffer> <leader>wd <Plug>VimwikiDeleteFile
     nmap <buffer> <leader>wr <Plug>VimwikiRenameFile
-    nmap <buffer> <leader>wb :call <SID>BackwardLink_handler()<CR>
-    nmap <buffer> <leader>wp :call <SID>Insert_bib()<CR>
-    nmap <buffer> <leader>wi :call <SID>Insert_PNG()<CR>
+    " DEPRECATED: use the History command (<leader>wih) to link recent notes
+    " nmap <buffer> <leader>wb :call <SID>BackwardLink_handler()<CR>
+    " vim(W)iki (I)nsert (B)ib
+    nmap <buffer> <leader>wib :call <SID>Insert_bib()<CR>
+    " vim(W)iki (I)nsert (I)mage
+    nmap <buffer> <leader>wii :call <SID>Insert_PNG()<CR>
     nmap <buffer> <CR> :call <SID>Link_handler()<CR>
   endfun
-  nmap <leader>wn :call <SID>Make_emptynote()<CR>
-  nmap <Leader>ww <Plug>VimwikiIndex
   augroup vimwikicmds
     autocmd! vimwikicmds
     autocmd FileType vimwiki :call GoVimwiki()
     autocmd FileType vimwiki :call GoVimwiki_FZF()
   augroup end
-  "\<CR>
+  nmap <leader>wn :call Make_emptynote()<CR>
+  nmap <Leader>ww <Plug>VimwikiIndex
   " copy the current file name to use it in notes
   " nmap <leader>cpf :let @+ = expand("%:t")<CR>
   " easily create link to previous buffer
@@ -560,8 +567,9 @@ Plug 'junegunn/fzf.vim'
     copen
     cc
   endfunction
-  function! s:test(lines)
+  function! MyTest()
     echo "TEST"
+    return 4
   endfunction
   " TODO: why does this work also with other function names? for some reason
   " the FuncRef methods always implements populating the quickfix list even
@@ -712,20 +720,19 @@ Plug 'junegunn/fzf.vim'
   let g:buff_hist_size = 10
   function! BuffHist_update()
     let l:bufname = bufname()
-    if l:bufname != ''
+    if l:bufname != '' &&  fnamemodify(l:bufname,":h") == g:VIMWIKI_DIR
+      let l:filename = fnamemodify(l:bufname,":t")
       " if the buffer corresponds to a markdown file add it to the list
       " the filetype check should ensure this, but just to be sure
-      let l:bufname = fnamemodify(bufname(),":t")
       if len(g:buff_hist) == 0 
-        let g:buff_hist = [l:bufname]
+        let g:buff_hist = [l:filename]
       elseif l:bufname != g:buff_hist[0]
         " avoid adding duplicate entries by leaving/re-entering the same buff
-        let g:buff_hist = [l:bufname] + g:buff_hist
+        let g:buff_hist = [l:filename] + g:buff_hist
       endif
       if len(g:buff_hist) > g:buff_hist_size + 1
         " keep buffer list size under control
         let g:buff_hist = g:buff_hist[: g:buff_hist_size]
-        echo len(g:buff_hist)
       endif
     endif
   endfunction
@@ -752,6 +759,8 @@ Plug 'junegunn/fzf.vim'
   " ================
   " SEARCH FUNCTIONS
   " ================
+  " These functions use FZF only for the interface, they don't perform any
+  " fuzzy searching (--phony)
   function! RipgrepFZF(query, fullscreen, sink, files)
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
     " line-number is needed for the preview
@@ -803,18 +812,16 @@ Plug 'junegunn/fzf.vim'
   " ============
   " FZF COMMANDS
   " ============
-  " function WhereAmI(loc)
-  "   echo "I'm in " . a:loc
-  " endfunction
   command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0, "Rg_handler") 
   command! -nargs=* -bang Cite call PapersFZF(<q-args>, <bang>0, "Cite_handler") 
   command! -nargs=* -bang Rg call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", "") 
   command! -nargs=* -bang Qf call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", Qfix_handler()) 
   command! -nargs=* -bang Incoming call RipgrepFZF("^title: ", 0, "Rg_handler", Incoming_handler())
   command! -nargs=* -bang Outgoing call RipgrepFZF("^title: ", 0, "Rg_handler", Outgoing_handler())
-  command! -nargs=* -bang RecentNotes call RipgrepFZF("^title: ", 0, "FZFLink_handler", BuffHist_handler())
-  " command! -nargs=* -bang Test call WhereAmI(expand("%h"))
-  command! -bang -nargs=* TagsFZF
+  command! -nargs=* -bang History call RipgrepFZF("^title: ", 0, "FZFLink_handler", BuffHist_handler())
+  " ->Fuzzy<- searching of tags in my vimwiki, most of the other commands use
+  "  rg for search and fzf -phony
+  command! -nargs=* -bang Tags
   \ call fzf#vim#grep(
   \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -e ^tags: -- ', 1,
   \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
@@ -829,68 +836,27 @@ Plug 'junegunn/fzf.vim'
   nnoremap <leader>fw :Rg <C-R><C-W><CR>
   " Vimwiki specific bindings that use FZF
   function! GoVimwiki_FZF()
-    nnoremap <buffer> <leader>ft :TagsFZF<CR>
-    nnoremap <buffer> <leader>fq :Qf<CR>
-    nnoremap <buffer> <leader>fp :Papers<CR>
-    nnoremap <buffer> <leader>fc :Cite<CR>
-    nnoremap <buffer> <leader>fi :Incoming<CR>
-    nnoremap <buffer> <leader>fo :Outgoing<CR>
-    nnoremap <buffer> <leader>fl :RecentNotes<CR>
+    " Old mappings
+    " nnoremap <buffer> <leader>ft :Tags<CR>
+    " nnoremap <buffer> <leader>fq :Qf<CR>
+    " nnoremap <buffer> <leader>fp :Papers<CR>
+    " nnoremap <buffer> <leader>fc :Cite<CR>
+    " nnoremap <buffer> <leader>fi :Incoming<CR>
+    " nnoremap <buffer> <leader>fo :Outgoing<CR>
+    " nnoremap <buffer> <leader>fh :History<CR>
+    " Mappings start with W for vimwiki, the ones that perform some search
+    " then use F, the ones that insert something use I
+    " e.g. wft -> vim(W)iki (F)zf    (T)ags
+    "      wic -> vim(W)iki (I)nsert (C)itation
+    nnoremap <buffer> <leader>wft :Tags<CR>
+    nnoremap <buffer> <leader>wfq :Qf<CR>
+    nnoremap <buffer> <leader>wfp :Papers<CR>
+    nnoremap <buffer> <leader>wfi :Incoming<CR>
+    nnoremap <buffer> <leader>wfo :Outgoing<CR>
+    nnoremap <buffer> <leader>wih :History<CR>
+    nnoremap <buffer> <leader>wic :Cite<CR>
   endfunction
-  autocmd  FileType vimwiki 
-  \| autocmd BufEnter <buffer> call BuffHist_update()
-
-" Plug 'liuchengxu/vim-which-key'
-"   set timeout
-"   set timeoutlen=500
-"   " added two spaces because the vsplit was cutting the last 2 chars
-"   let g:which_key_map = {
-"         \ '-' : 'Close buffer  ',
-"         \ '=' : 'Open scratchpad  ',
-"         \ 'c' : 'Open init.vim  ',
-"         \ 'd' : 'Put date Y-m-d  ',
-"         \ 'e' : 'Exec curr line as bash  ',
-"         \ 'g' : 'Get line  ',
-"         \ 'l' : 'Dictionary lookup  ',
-"         \ 'm' : 'Toggle md preview  ',
-"         \ 'n' : 'Create new note  ',
-"         \ 'p' : '<C-^>  ',
-"         \ 'q' : 'Quit  ',
-"         \ 's' : 'Save  ',
-"         \ }
-"   let g:which_key_map.w = {
-"         \ 'name' : '+vimwiki  ',
-"         \ 'b' : 'Backward link  ',
-"         \ 'd' : 'Delete file  ',
-"         \ 'i' : 'Insert png from clipboard ',
-"         \ 'p' : 'Insert paper .bib  ',
-"         \ 'r' : 'Rename file  ',
-"         \ 'w' : 'Open index  ',
-"         \ }
-"   let g:which_key_map.f = {
-"         \ 'name' : '+fzf  ',
-"         \ 'b' : 'Buffers  ',
-"         \ 'c' : 'Cite  ',
-"         \ 'd' : 'Dictionary  ',
-"         \ 'f' : 'Files  ',
-"         \ 'l' : 'Lines  ',
-"         \ 'r' : 'RipGrep  ',
-"         \ 't' : 'List notes, search tags  ',
-"         \ 'w' : 'RipGrep curr word  ',
-"         \ }
-"   " the horiz floating bar is an ugly grey wall
-"   " the keys are also too spaced out to scan easily
-"   " Using a separate vertical stplit is much better
-"   let g:which_key_vertical = 1
-"   let g:which_key_use_floating_win = 0
-"   let g:which_key_position = 'topleft'
-"   autocmd! FileType which_key
-"   autocmd  FileType which_key set laststatus=0 noshowmode noruler
-"     \| autocmd BufLeave <buffer> set laststatus=2 showmode ruler
-"   nnoremap <silent> <leader> :<c-u>WhichKey '<Space>'<CR>
-"   " vnoremap <silent> <leader> :<c-u>WhichKeyVisual '<Space>'<CR>
-"   " ADD register after the Plug end
-"   " call which_key#register('<Space>', "g:which_key_map")
+  autocmd BufEnter *.md call BuffHist_update()
 
 Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
   set nohlsearch " easymotion will do the highlighting
@@ -947,8 +913,6 @@ Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
 
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
-
-" call which_key#register('<Space>', "g:which_key_map")
 
 " }}}
 " ============================================================================
