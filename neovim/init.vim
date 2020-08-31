@@ -172,34 +172,44 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " Overrides the powerfull vimwiki <Enter> mapping to handle zettle-style
     " notes.
     " NOTE: Needs to re-implement the link/url handling functionality
-    let l:word = expand('<cWORD>')
+    " let l:word = expand('<cWORD>')
+    let l:word = GetUnderCursor('!\?\[.\+\]([^)]\+)').match
+    if l:word == ''
+      let l:word = expand('<cWORD>')
+    endif
     " URL
-    " Little trick: Since url is checked first it handles also things like
+    " https://www.img.com
     " ![test](https://img.com) =)
     let l:match = matchlist(l:word ,'https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\-\?\=]\+')
     if len(l:match) > 0
       let l:url = l:match[0]
-      echo l:url 
+      echo "Opening " . l:url 
       call system('xdg-open ' . shellescape(l:url).' &')
       return
     endif
-    " markdown image ![]()
-    let l:match = matchlist(l:word ,'\![.\+\](\(.\+\))')
+    " markdown image ![blablabla](assets/link.{jpg|png|jpeg})
+    let l:match = matchlist(l:word ,'\!\[.\+\](\(assets/.\+\.\(png\|jpeg\|jpg\)\))')
     if len(l:match) > 0
       let l:img = g:VIMWIKI_DIR . '/' . l:match[1]
-      echo l:img 
       call system('xdg-open ' . shellescape(l:img) . ' &')
       return
     endif
+    " video link [title](assets/name.mp4)
+    let l:match = matchlist(l:word ,'[.\+\](\(assets/.\+\.mp4\))')
+    if len(l:match) > 0
+      let l:vid = g:VIMWIKI_DIR . '/' . l:match[1]
+      call system('xdg-open ' . shellescape(l:vid) . ' &')
+      return
+    endif
     " markdown link []()
-    let match_link = s:GetUnderCursor('\[.\+\]([^)]\+)')
+    let l:match = matchlist(l:word ,'\[\([^\]]\+\)\](\([^)]\+\))')
+    " let match_link = GetUnderCursor('\[.\+\]([^)]\+)')
     " If current line contains a link follow it 
-    if  match_link.start >= 0
+    if  len(l:match) > 0
       " extract groups -> link_name and file_name
-      let l:parts = matchlist(match_link.match, '\[\([^\]]\+\)\](\([^)]\+\))')
       " matchlist returns [fullmatch, group1, group2,...]
-      let l:title = l:parts[1]
-      let l:file = l:parts[2]
+      let l:title = l:match[1]
+      let l:file = l:match[2]
       " open link takes care of creating the file and allows for going back with backspace
       call vimwiki#base#open_link("e",l:file)
       call s:Insert_header("",l:title)
@@ -211,7 +221,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   function! s:ForwardLink_handler()
     let l:name = expand('<cWORD>')
     " create new note and wraps the current word in a markdown link syntax
-    let l:path = s:Make_zettlenote().id
+    let l:path = Make_zettlenote().id
     call s:Insert_link(l:name, l:path)
   endfunction
   function! s:BackwardLink_handler()
@@ -273,11 +283,63 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       echo "No image found in clipboard."
     endif
   endfunction
+  " from https://neovim.io/doc/user/job_control.html
+  function! s:OnEvent(job_id, data, event) dict
+      if a:event == 'stdout'
+        let str = self.shell.' stdout: '.join(a:data)
+        echo str
+      else
+        echo self.shell . ": Download complete."
+      endif
+  endfunction
+  let s:callbacks = {
+    \ 'on_stdout': function('s:OnEvent'),
+    \ 'on_stderr': function('s:OnEvent'),
+    \ 'on_exit': function('s:OnEvent')
+    \ }
+  let g:job1 = -1
+  function YoutubeDownloader(url, file)
+    let l:cmd = printf("youtube-dl -f 'best[height<=480]' --format mp4 -o '%s' %s", a:file, a:url)
+    let g:job1 = jobstart(['bash', '-c', l:cmd], extend({'shell': 'youtube-dl'}, s:callbacks))
+  endfunction
+  function! Insert_youtube_store()
+    " Use youtube-dl to store a youtube video to assets/file_tag.mp4
+    py from uuid import uuid4
+    " Get clipboard content
+    let l:url = @*
+    " Check if it is a youtube url
+    let l:match = matchlist(l:url ,'^https\?://\(youtu\.be\|www\.youtube\.com\).\+$')
+    if len(l:match) > 0
+      let l:file = expand('%:t:r')
+      let l:id = pyeval("uuid4().hex[:5]")
+      " name to use for backup
+      let l:link = "assets/" . l:file . '_' . l:id . '.mp4'
+      " location for backup
+      let l:path = g:VIMWIKI_DIR . '/' . l:link
+      let l:img_link = '[video]('.l:link . ')'
+      " insert link into file
+      put =l:img_link
+      " download the video in the background
+      call YoutubeDownloader(l:url, l:path)
+    else
+      echo "No youtube link found in clipboard."
+    endif
+  endfunction
+  function! Insert_youtube()
+    let l:url = @*
+    let l:match = matchlist(l:url ,'^https\?://\(youtu\.be\|www\.youtube\.com\).\+$')
+    if len(l:match) > 0
+      let l:img_link = '[video](' . l:url . ')'
+      put =l:img_link
+    else
+      echo "No youtube link found in clipboard."
+    endif
+  endfunction
   function! s:Insert_link(name, path)
     " Use replace to insert a markdown link [a:title](a:file) in the current line.
     " Don't use bunch of spaces or empty lines as links
     if a:name != '' && a:name !~? '^\s\+$'
-      let l:pos = s:GetUnderCursor(a:name)
+      let l:pos = GetUnderCursor(a:name)
       call s:ReplaceCoords('['.a:name.']('.a:path.')',l:pos)
     else
       echo "Select something to make a link."
@@ -305,7 +367,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   function! s:Popup_cite()
     call s:Popup_cite_close()
     " use non-greedy match \{-} to select the content of square brackets
-    let search = s:GetUnderCursor('\[.\{-}\](\([^)]\+\.md\))')
+    let search = GetUnderCursor('\[.\{-}\](\([^)]\+\.md\))')
     if search.match != ''
       if s:CiteWin < 0
         let file = matchlist(search.match, '\[.\{-}\](\([^)]\+\.md\))')[1]
@@ -343,7 +405,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " autocmd InsertLeave <buffer> :update
     autocmd BufEnter <buffer> setlocal signcolumn=no
     " autocmd! CursorMoved *.md call s:Popup_cite()
-    autocmd! CursorMoved *.md call s:Popup_cite_close()
+    autocmd! CursorMoved,WinLeave *.md call s:Popup_cite_close()
     autocmd! CursorHold *.md call s:Popup_cite()
     " Link navigation mappings
     nmap <buffer> <TAB> <Plug>VimwikiNextLink
@@ -360,6 +422,8 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     nmap <buffer> <leader>wib :call <SID>Insert_bib()<CR>
     " vim(W)iki (I)nsert (I)mage
     nmap <buffer> <leader>wii :call <SID>Insert_PNG()<CR>
+    nmap <buffer> <leader>wiy :call Insert_youtube()<CR>
+    nmap <buffer> <leader>wis :call Insert_youtube_store()<CR>
     nmap <buffer> <CR> :call <SID>Link_handler()<CR>
   endfun
   augroup vimwikicmds
@@ -1048,10 +1112,10 @@ function! UniqList(list)
   return uniqueList
 endfunction
 " function! ChangeWordUnderCursor(from, to)
-"   let pos = s:GetUnderCursor(a:from)
+"   let pos = GetUnderCursor(a:from)
 "   call ReplaceCoords(a:to, pos)
 " endfunction
-function! s:GetUnderCursor(pattern)
+function! GetUnderCursor(pattern)
 " Return the match under the cursor. Yeah, it's a pain
   let col = col('.') - 1
   let line = getline('.')
