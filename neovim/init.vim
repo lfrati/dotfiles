@@ -230,6 +230,19 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     let l:name = expand('<cWORD>')
     call s:Insert_link(l:name, l:path)
   endfunction
+  function! Paste_handler()
+    if s:Insert_bib()
+      return
+    endif
+    if s:Insert_PNG()
+      return
+    endif
+    if Insert_youtube()
+      return
+    endif
+    " Nothing special to do, insert contents of + register
+    put +
+  endfunction
   " ================
   " INSERT FUNCTIONS
   " ================
@@ -261,8 +274,10 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       execute '%s/tags\: /tags\: :paper:/'
       " sometimes an empty line appears, don't know why
       execute '%s/}\n\n```/}\r```/'
+      return 1
     else
-      echo "Clipboard doesn't contain bib"
+      " echo "Clipboard doesn't contain bib"
+      return 0
     endif
   endfunction
   function! s:Insert_PNG()
@@ -279,8 +294,10 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       echo "Image saved to " . l:path
       let l:img_link = '![img]('.l:link . ')'
       put =l:img_link
+      return 1
     else
-      echo "No image found in clipboard."
+      " echo "No image found in clipboard."
+      return 0
     endif
   endfunction
   " from https://neovim.io/doc/user/job_control.html
@@ -302,27 +319,54 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     let l:cmd = printf("youtube-dl -f 'best[height<=480]' --format mp4 -o '%s' %s", a:file, a:url)
     let g:job1 = jobstart(['bash', '-c', l:cmd], extend({'shell': 'youtube-dl'}, s:callbacks))
   endfunction
-  function! Insert_youtube_store()
-    " Use youtube-dl to store a youtube video to assets/file_tag.mp4
+  function! Backup_youtube()
+    " Convert youtube URLs to links and backup content
+    " https://youtu.be/rbfFt2uNEyQ?t=5478           -> [video](assets/init_5f4e7.mp4)
+    " https://www.youtube.com/watch?v=Z_MA8CWKxFU   -> [video](assets/init_f5913.mp4)
+    " [test 1](https://youtu.be/rbfFt2uNEyQ?t=5478) -> [test 1](assets/init_f5782.mp4)
+    " [test 2](https://www.youtube.com/watch?v=Z_U) -> [test 2](assets/init_ee172.mp4)
+    " https://www.img.com                           -> https://www.img.com
     py from uuid import uuid4
-    " Get clipboard content
-    let l:url = @*
-    " Check if it is a youtube url
-    let l:match = matchlist(l:url ,'^https\?://\(youtu\.be\|www\.youtube\.com\).\+$')
+    let l:old = GetUnderCursor('\[[^\]]\+\](https\?://\(youtu\.be\|www\.youtube\.com\)[^)]\+)')
+    let l:word = l:old.match
+    if l:word == ''
+      let l:old = GetUnderCursor('https\?://\(youtu\.be\|www\.youtube\.com\)[^)]\+')
+      let l:word = l:old.match
+    endif
+    " get the url and the title (might not be present)
+    let l:match = matchlist(l:word ,'https\?://\(youtu\.be\|www\.youtube\.com\)[^)]\+')
+    let l:title = matchlist(l:word ,'\[\([^\]]\+\)\]')
     if len(l:match) > 0
+      let l:url = l:match[0]
       let l:file = expand('%:t:r')
       let l:id = pyeval("uuid4().hex[:5]")
       " name to use for backup
       let l:link = "assets/" . l:file . '_' . l:id . '.mp4'
       " location for backup
       let l:path = g:VIMWIKI_DIR . '/' . l:link
-      let l:img_link = '[video]('.l:link . ')'
+      let l:name = ""
+      " use previous title if present
+      if len(l:title) > 0
+        let l:name = l:title[1]
+      else
+        let l:name = 'video'
+      endif
       " insert link into file
-      put =l:img_link
-      " download the video in the background
-      call YoutubeDownloader(l:url, l:path)
-    else
-      echo "No youtube link found in clipboard."
+      let l:new = "[".l:name."](" . l:link . ")"
+      " check if video actually exists
+      let l:vid_title = trim(system("youtube-dl -e " . shellescape(l:url)))
+      " echo l:vid_title
+      if v:shell_error == 0
+        let choice = confirm("Backup: " . l:vid_title . "?","&No\n&Yes")
+        if choice == 2
+          " download the video in the background
+          call YoutubeDownloader(shellescape(l:url), l:path)
+          call s:ReplaceCoords(l:new, l:old)
+        endif
+        return
+      else
+        echo "Video not found."
+      endif
     endif
   endfunction
   function! Insert_youtube()
@@ -331,8 +375,10 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     if len(l:match) > 0
       let l:img_link = '[video](' . l:url . ')'
       put =l:img_link
+      return 1
     else
-      echo "No youtube link found in clipboard."
+      " echo "No youtube link found in clipboard."
+      return 0
     endif
   endfunction
   function! s:Insert_link(name, path)
@@ -405,7 +451,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " autocmd InsertLeave <buffer> :update
     autocmd BufEnter <buffer> setlocal signcolumn=no
     " autocmd! CursorMoved *.md call s:Popup_cite()
-    autocmd! CursorMoved,WinLeave *.md call s:Popup_cite_close()
+    autocmd! CursorMoved,WinLeave,BufLeave,FocusLost *.md call s:Popup_cite_close()
     autocmd! CursorHold *.md call s:Popup_cite()
     " Link navigation mappings
     nmap <buffer> <TAB> <Plug>VimwikiNextLink
@@ -419,12 +465,15 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " DEPRECATED: use the History command (<leader>wih) to link recent notes
     " nmap <buffer> <leader>wb :call <SID>BackwardLink_handler()<CR>
     " vim(W)iki (I)nsert (B)ib
-    nmap <buffer> <leader>wib :call <SID>Insert_bib()<CR>
+    " nmap <buffer> <leader>wib :call <SID>Insert_bib()<CR>
     " vim(W)iki (I)nsert (I)mage
-    nmap <buffer> <leader>wii :call <SID>Insert_PNG()<CR>
-    nmap <buffer> <leader>wiy :call Insert_youtube()<CR>
-    nmap <buffer> <leader>wis :call Insert_youtube_store()<CR>
+    " nmap <buffer> <leader>wii :call <SID>Insert_PNG()<CR>
+    " vim(W)iki (I)nsert (Y)outube
+    " nmap <buffer> <leader>wiy :call Insert_youtube()<CR>
+    " vim(W)iki (B)ackup (Y)outube 
+    nmap <buffer> <silent> <leader>wby :call Backup_youtube()<CR>
     nmap <buffer> <CR> :call <SID>Link_handler()<CR>
+    inoremap <C-v> <C-o>:call Paste_handler()<CR>
   endfun
   augroup vimwikicmds
     autocmd! vimwikicmds
@@ -884,11 +933,16 @@ Plug 'junegunn/fzf.vim'
   command! -nargs=* -bang Outgoing call RipgrepFZF("^title: ", 0, "Rg_handler", Outgoing_handler())
   command! -nargs=* -bang History call RipgrepFZF("^title: ", 0, "FZFLink_handler", BuffHist_handler())
   " ->Fuzzy<- searching of tags in my vimwiki, most of the other commands use
-  "  rg for search and fzf -phony
+  "  rg for search and fzf with -phony just for the interface
   command! -nargs=* -bang Tags
   \ call fzf#vim#grep(
   \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -e ^tags: -- ', 1,
   \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
+  " Like rg but with fuzzy finding
+  command! -nargs=* -bang FZFiles
+  \ call fzf#vim#grep(
+  \   'rg --column --line-number --no-heading --sortr=modified --color=always --smart-case -- '.shellescape(<q-args>), 1,
+  \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)  
   " ============
   " FZF MAPPINGS
   " ============
@@ -913,6 +967,7 @@ Plug 'junegunn/fzf.vim'
     " e.g. wft -> vim(W)iki (F)zf    (T)ags
     "      wic -> vim(W)iki (I)nsert (C)itation
     nnoremap <buffer> <leader>wft :Tags<CR>
+    nnoremap <buffer> <leader>wff :FZFiles<CR>
     nnoremap <buffer> <leader>wfq :Qf<CR>
     nnoremap <buffer> <leader>wfp :Papers<CR>
     nnoremap <buffer> <leader>wfi :Incoming<CR>
@@ -1113,7 +1168,7 @@ function! UniqList(list)
 endfunction
 " function! ChangeWordUnderCursor(from, to)
 "   let pos = GetUnderCursor(a:from)
-"   call ReplaceCoords(a:to, pos)
+"   call s:ReplaceCoords(a:to, pos)
 " endfunction
 function! GetUnderCursor(pattern)
 " Return the match under the cursor. Yeah, it's a pain
