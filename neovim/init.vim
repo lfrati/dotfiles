@@ -75,7 +75,6 @@ Plug 'plasticboy/vim-markdown'
   endfunction
   au BufEnter *.md setlocal foldexpr=MarkdownLevel()  
   au BufEnter *.md setlocal foldmethod=expr
-  " au BufEnter *.md setlocal foldlevel=99
 
 Plug 'airblade/vim-gitgutter'
   let g:gitgutter_map_keys = 0 
@@ -237,11 +236,9 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     if s:Insert_PNG()
       return
     endif
-    if Insert_youtube()
+    if Insert_video_link()
       return
     endif
-    " Nothing special to do, insert contents of + register
-    put +
   endfunction
   " ================
   " INSERT FUNCTIONS
@@ -307,6 +304,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
         echo str
       else
         echo self.shell . ": Download complete."
+        let g:job = -1
       endif
   endfunction
   let s:callbacks = {
@@ -314,12 +312,17 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     \ 'on_stderr': function('s:OnEvent'),
     \ 'on_exit': function('s:OnEvent')
     \ }
-  let g:job1 = -1
-  function YoutubeDownloader(url, file)
+  let g:job = -1
+  function! YoutubeDownloader(url, file)
     let l:cmd = printf("youtube-dl -f 'best[height<=480]' --format mp4 -o '%s' %s", a:file, a:url)
-    let g:job1 = jobstart(['bash', '-c', l:cmd], extend({'shell': 'youtube-dl'}, s:callbacks))
+    let g:job = jobstart(['bash', '-c', l:cmd], extend({'shell': 'youtube-dl'}, s:callbacks))
   endfunction
-  function! Backup_youtube()
+  function! JobKill()
+    call jobstop(g:job1)
+    let g:job = -1
+  endfunction
+  let g:video_patterns = "youtu\\.be\\|www\\.youtube\\.com\\|vimeo\\.com"
+  function! Backup_video()
     " Convert youtube URLs to links and backup content
     " https://youtu.be/rbfFt2uNEyQ?t=5478           -> [video](assets/init_5f4e7.mp4)
     " https://www.youtube.com/watch?v=Z_MA8CWKxFU   -> [video](assets/init_f5913.mp4)
@@ -327,17 +330,19 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " [test 2](https://www.youtube.com/watch?v=Z_U) -> [test 2](assets/init_ee172.mp4)
     " https://www.img.com                           -> https://www.img.com
     py from uuid import uuid4
-    let l:old = GetUnderCursor('\[[^\]]\+\](https\?://\(youtu\.be\|www\.youtube\.com\)[^)]\+)')
+    let l:url_pattern = 'https\?://\(' . g:video_patterns . '\)[^ )]\+'
+    let l:title_pattern = '\[\([^\]]\+\)\]'
+    let l:link_pattern =  l:title_pattern . '(' . l:url_pattern . ')'
+    let l:old = GetUnderCursor(l:link_pattern)
     let l:word = l:old.match
     if l:word == ''
-      let l:old = GetUnderCursor('https\?://\(youtu\.be\|www\.youtube\.com\)[^)]\+')
+      let l:old = GetUnderCursor(l:url_pattern)
       let l:word = l:old.match
     endif
     " get the url and the title (might not be present)
-    let l:match = matchlist(l:word ,'https\?://\(youtu\.be\|www\.youtube\.com\)[^)]\+')
-    let l:title = matchlist(l:word ,'\[\([^\]]\+\)\]')
-    if len(l:match) > 0
-      let l:url = l:match[0]
+    let l:url = matchlist(l:word , l:url_pattern)[0]
+    let l:title = matchlist(l:word , l:title_pattern)
+    if len(l:url) > 0
       let l:file = expand('%:t:r')
       let l:id = pyeval("uuid4().hex[:5]")
       " name to use for backup
@@ -369,12 +374,13 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       endif
     endif
   endfunction
-  function! Insert_youtube()
+  function! Insert_video_link()
     let l:url = @*
-    let l:match = matchlist(l:url ,'^https\?://\(youtu\.be\|www\.youtube\.com\).\+$')
+    let l:match = matchlist(l:url ,'^https\?://' . g:video_patterns . '.\+$')
     if len(l:match) > 0
       let l:img_link = '[video](' . l:url . ')'
-      put =l:img_link
+      " put =l:img_link
+      execute "normal! A" . l:img_link 
       return 1
     else
       " echo "No youtube link found in clipboard."
@@ -469,10 +475,11 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " vim(W)iki (I)nsert (I)mage
     " nmap <buffer> <leader>wii :call <SID>Insert_PNG()<CR>
     " vim(W)iki (I)nsert (Y)outube
-    " nmap <buffer> <leader>wiy :call Insert_youtube()<CR>
+    " nmap <buffer> <leader>wiy :call Insert_video_link()<CR>
     " vim(W)iki (B)ackup (Y)outube 
-    nmap <buffer> <silent> <leader>wby :call Backup_youtube()<CR>
+    nmap <buffer> <silent> <leader>wby :call Backup_video()<CR>
     nmap <buffer> <CR> :call <SID>Link_handler()<CR>
+    nmap <buffer> <C-Space> <Plug>VimwikiToggleListItem
     inoremap <C-v> <C-o>:call Paste_handler()<CR>
   endfun
   augroup vimwikicmds
@@ -833,13 +840,13 @@ Plug 'junegunn/fzf.vim'
   let g:buff_hist_size = 10
   function! BuffHist_update()
     let l:bufname = bufname()
-    if l:bufname != '' &&  fnamemodify(l:bufname,":h") == g:VIMWIKI_DIR
+    if l:bufname != '' &&  fnamemodify(l:bufname,":p:h") == g:VIMWIKI_DIR
       let l:filename = fnamemodify(l:bufname,":t")
       " if the buffer corresponds to a markdown file add it to the list
       " the filetype check should ensure this, but just to be sure
       if len(g:buff_hist) == 0 
         let g:buff_hist = [l:filename]
-      elseif l:bufname != g:buff_hist[0]
+      elseif l:filename != g:buff_hist[0]
         " avoid adding duplicate entries by leaving/re-entering the same buff
         let g:buff_hist = [l:filename] + g:buff_hist
       endif
@@ -902,7 +909,7 @@ Plug 'junegunn/fzf.vim'
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
     " line-number/column is needed for the preview
     " '|| true' prevents showing 'command failed ...' when nothing is matched
-    let command_fmt = 'rg :paper: -l | xargs rg --line-number --column --color=always --smart-case -- %s || true'
+    let command_fmt = 'rg \#paper\(-toread\)\?\# -l | xargs rg --line-number --column --color=always --smart-case -- %s || true'
     let initial_command = printf(command_fmt, shellescape(a:query))
     let reload_command = printf(command_fmt, '{q}')
     " options = 
@@ -975,7 +982,7 @@ Plug 'junegunn/fzf.vim'
     nnoremap <buffer> <leader>wih :History<CR>
     nnoremap <buffer> <leader>wic :Cite<CR>
   endfunction
-  autocmd BufEnter *.md call BuffHist_update()
+  autocmd! BufEnter *.md call BuffHist_update()
 
 Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
   set nohlsearch " easymotion will do the highlighting
@@ -1069,9 +1076,13 @@ set omnifunc=syntaxcomplete#Complete " On <c-x><c-o> use the file syntax to gues
 set autoread                           " Reload files changed outside vim
 set lazyredraw                         " Don't redraw while executing macros (good performance setting)
 set linebreak                          " Stop annoying 80 chars line wrapping
-set scrolloff=4
-set foldlevel=99
+set scrolloff=4                        " Leave some space above and below the cursor while scrolling
 set signcolumn=yes                     " Show the gutter for git info, errors... 
+" set foldlevel=99                       " Unfold folds by default
+" Foldlevel=99 means I have to zr 98 times before folding a second level fold
+" with the following autocmd I set the foldlevel value to the max fold level
+" in the file, -> the first zr folds the deepest level and so on
+autocmd BufWinEnter * let &foldlevel = max(map(range(1, line('$')), 'foldlevel(v:val)'))
 
 " Search down into subfolders
 " Provides tab-completion for all file-related tasks
@@ -1338,6 +1349,16 @@ nmap Q <Nop>
 
 " Remap VIM 0 to first non-blank character
 map 0 ^
+
+" Hopefully more intuitive folding navigation 
+" WARNING: OVERRIDES f (find) mapping, but I never use it on its own e.g. fl vs dfl
+" When looking at a closed fold down (j) opens it, like pulling down a menu
+nnoremap fj zr
+" h is like a stronger j, so it pulls down all the folds, i.e. open all 
+nnoremap fh zR
+" opposite for up (k) / l  
+nnoremap fl zM
+nnoremap fk zm
 
 " }}}
 " ============================================================================
