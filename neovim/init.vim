@@ -51,30 +51,6 @@ Plug 'godlygeek/tabular'
 
 Plug 'plasticboy/vim-markdown'
   let g:vim_markdown_folding_disabled = 1
-  " I'm not crazy, I swear for some reason folding didn't work properly
-  function! MarkdownLevel()
-      if getline(v:lnum) =~ '^# .*$'
-          return ">1"
-      endif
-      if getline(v:lnum) =~ '^## .*$'
-          return ">2"
-      endif
-      if getline(v:lnum) =~ '^### .*$'
-          return ">3"
-      endif
-      if getline(v:lnum) =~ '^#### .*$'
-          return ">4"
-      endif
-      if getline(v:lnum) =~ '^##### .*$'
-          return ">5"
-      endif
-      if getline(v:lnum) =~ '^###### .*$'
-          return ">6"
-      endif
-      return "=" 
-  endfunction
-  au BufEnter *.md setlocal foldexpr=MarkdownLevel()  
-  au BufEnter *.md setlocal foldmethod=expr
 
 Plug 'airblade/vim-gitgutter'
   let g:gitgutter_map_keys = 0 
@@ -1078,11 +1054,38 @@ set lazyredraw                         " Don't redraw while executing macros (go
 set linebreak                          " Stop annoying 80 chars line wrapping
 set scrolloff=4                        " Leave some space above and below the cursor while scrolling
 set signcolumn=yes                     " Show the gutter for git info, errors... 
-" set foldlevel=99                       " Unfold folds by default
+set foldlevel=99                       " Unfold folds by default, don't use nofoldenable, for some reason the foldlevel gets messed up
 " Foldlevel=99 means I have to zr 98 times before folding a second level fold
 " with the following autocmd I set the foldlevel value to the max fold level
 " in the file, -> the first zr folds the deepest level and so on
-autocmd BufWinEnter * let &foldlevel = max(map(range(1, line('$')), 'foldlevel(v:val)'))
+function! FindFoldLevel()
+  return max(map(range(1, line('$')), 'foldlevel(v:val)'))
+endfunction
+" I'm not crazy, I swear for some reason folding didn't work properly
+function! MarkdownLevel()
+    if getline(v:lnum) =~ '^# .*$'
+        return ">1"
+    endif
+    if getline(v:lnum) =~ '^## .*$'
+        return ">2"
+    endif
+    if getline(v:lnum) =~ '^### .*$'
+        return ">3"
+    endif
+    if getline(v:lnum) =~ '^#### .*$'
+        return ">4"
+    endif
+    if getline(v:lnum) =~ '^##### .*$'
+        return ">5"
+    endif
+    if getline(v:lnum) =~ '^###### .*$'
+        return ">6"
+    endif
+    return "=" 
+endfunction
+autocmd BufEnter *.md setlocal foldexpr=MarkdownLevel()  
+autocmd BufEnter *.md setlocal foldmethod=expr
+autocmd BufEnter *.md let &foldlevel = FindFoldLevel()
 
 " Search down into subfolders
 " Provides tab-completion for all file-related tasks
