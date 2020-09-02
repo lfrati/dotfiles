@@ -753,10 +753,16 @@ Plug 'junegunn/fzf.vim'
       let l:lines = a:lines[1:]
     endif
     if len(l:lines) == 1
-      let l:file = split(l:lines[0],":")[0]
+      let l:parts = split(l:lines[0],":")
+      let l:file = l:parts[0]
+      let l:linenum = l:parts[1]
       cclose
-      " vimwiki open_link based on the default wiki, no need for full path
-      call vimwiki#base#open_link("e",l:file)
+      if fnamemodify(l:file,":p:h") == g:VIMWIKI_DIR
+        " vimwiki open_link based on the default wiki, no need for full path
+        call vimwiki#base#open_link("e",l:file)
+      else
+        execute "e +" . l:linenum . " " . fnameescape(l:file)
+      endif
     else
       let l:lines =  map(l:lines, { key, val -> split(val,":")})
       let l:quickfix = {} " use dictionary to remove duplicates
