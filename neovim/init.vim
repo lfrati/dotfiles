@@ -223,9 +223,10 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   " Insert yaml front matter in empty files
     if line('$') == 1 && getline(1) == ''
       let l:tags = "tags: " . a:tag . "\<CR>"
+      let l:keyw = "keywords: \<CR>"
       let l:title = "title: " . a:title . "\<CR>"
       let l:date = "date: " . system('date --iso-8601=seconds')
-      let l:header = "---\<CR>" . l:tags . l:title . l:date . "---\<CR>"
+      let l:header = "---\<CR>" . l:tags . l:keyw . l:title . l:date . "---\<CR>"
       execute "normal! ggi" . l:header
       normal ggj$
     endif
@@ -1093,9 +1094,9 @@ function! MarkdownLevel()
     endif
     return "=" 
 endfunction
-autocmd BufEnter *.md setlocal foldexpr=MarkdownLevel()  
-autocmd BufEnter *.md setlocal foldmethod=expr
-autocmd BufEnter *.md let &foldlevel = FindFoldLevel()
+autocmd BufReadPost *.md setlocal foldexpr=MarkdownLevel()  
+autocmd BufReadPost *.md setlocal foldmethod=expr
+autocmd BufReadPost *.md let &foldlevel = FindFoldLevel()
 
 " Search down into subfolders
 " Provides tab-completion for all file-related tasks
@@ -1372,6 +1373,9 @@ nnoremap fh zR
 " opposite for up (k) / l  
 nnoremap fl zM
 nnoremap fk zm
+" Open close individual folds
+nnoremap fi zc
+nnoremap fo zo
 
 " }}}
 " ============================================================================
