@@ -916,7 +916,7 @@ Plug 'junegunn/fzf.vim'
   " ============
   command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0, "Rg_handler") 
   command! -nargs=* -bang Cite call PapersFZF(<q-args>, <bang>0, "Cite_handler") 
-  command! -nargs=* -bang Rg call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", "") 
+  command! -nargs=* -bang MyRg call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", "") 
   command! -nargs=* -bang Qf call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", Qfix_handler()) 
   command! -nargs=* -bang Incoming call RipgrepFZF("^title: ", 0, "Rg_handler", Incoming_handler())
   command! -nargs=* -bang Outgoing call RipgrepFZF("^title: ", 0, "Rg_handler", Outgoing_handler())
@@ -931,7 +931,7 @@ Plug 'junegunn/fzf.vim'
   command! -nargs=* -bang FZFiles
   \ call fzf#vim#grep(
   \   'rg --column --line-number --no-heading --sortr=modified --color=always --smart-case -- '.shellescape(<q-args>), 1,
-  \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)  
+  \   fzf#vim#with_preview({'dir' : GitAwarePath()}), <bang>0)  
   " ============
   " FZF MAPPINGS
   " ============
@@ -939,8 +939,13 @@ Plug 'junegunn/fzf.vim'
   nnoremap <leader>ff :Files<CR>
   nnoremap <leader>fb :Buffers<CR>
   nnoremap <leader>fl :Lines<CR>
-  nnoremap <leader>fr :Rg<CR>
-  nnoremap <leader>fw :Rg <C-R><C-W><CR>
+  " Crazy mnemonics here. 
+  " frg -> (F)ZF (R)ip(G)rep
+  " frz -> (F)ZF (R)ipGrep (F)uzzy
+  " frw -> (F)ZF (R)ipGrep current (W)ord
+  nnoremap <leader>frg :MyRg<CR>
+  nnoremap <leader>frz :FZFiles<CR>
+  nnoremap <leader>frw :MyRg <C-R><C-W><CR>
   " Vimwiki specific bindings that use FZF
   function! GoVimwiki_FZF()
     " Old mappings
@@ -956,7 +961,6 @@ Plug 'junegunn/fzf.vim'
     " e.g. wft -> vim(W)iki (F)zf    (T)ags
     "      wic -> vim(W)iki (I)nsert (C)itation
     nnoremap <buffer> <leader>wft :Tags<CR>
-    nnoremap <buffer> <leader>wff :FZFiles<CR>
     nnoremap <buffer> <leader>wfq :Qf<CR>
     nnoremap <buffer> <leader>wfp :Papers<CR>
     nnoremap <buffer> <leader>wfi :Incoming<CR>
