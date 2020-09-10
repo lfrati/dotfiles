@@ -12,6 +12,8 @@
 set $mod Mod1
 set $super Mod4
 
+# Remove window title, TODO: do I want this?
+new_window pixel 1
 
 # 4.29. Focus on window activation
 # If a window is activated, e.g., via google-chrome www.google.com, it may request to take focus. Since this may not preferable, different reactions can be configured.
@@ -237,9 +239,9 @@ bindsym $mod+r mode "resize"
 # bar {
 #         status_command i3status
 # }
-bar {
-        status_command i3blocks
-}
+# bar {
+#         status_command i3blocks
+# }
 
 # focus_follows_mouse no
 
@@ -266,6 +268,9 @@ bindsym Print exec flameshot gui
 
 # Shortcut to easily open folders
 bindsym $mod+t exec thunar 
+
+# Good night screen
+bindsym Pause exec "sleep 1 ; xset dpms force off"
 
 bindsym $mod+Tab workspace back_and_forth
 ##############################################################

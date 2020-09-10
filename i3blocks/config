@@ -37,42 +37,6 @@ interval=30
 color=#7ac9fa
 separator=true
 
-[memory]
-command=/home/lapo/dotfiles/i3blocks/memory
-label=MEM 
-interval=30
-color=#8a85cc
-separator=true
-
-[cpu_temp]
-command=/home/lapo/dotfiles/i3blocks/temperature
-label=CPU 
-interval=10
-#T_WARN=70
-#T_CRIT=90
-#SENSOR_CHIP=""
-color=#05dfd7
-separator_block_width=10
-
-[cpu_usage]
-command=/home/lapo/dotfiles/i3blocks/cpu_usage
-interval=10
-#min_width=CPU: 100.00%
-#T_WARN=50
-#T_CRIT=80
-#DECIMALS=2
-color=#05dfd7
-separator=true
-
-[gpu-temp]
-command=/home/lapo/dotfiles/i3blocks/gpu-temp
-interval=5
-#min_width=GPU 100% 100% 100% 100%
-#T_WARN=70
-#T_CRIT=90
-color=#efb1ff
-separator=true
-
 [iface]
 command=/home/lapo/dotfiles/i3blocks/iface
 #IFACE=wlan0
