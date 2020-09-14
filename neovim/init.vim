@@ -110,7 +110,7 @@ Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
 
 " God this plugin is good. Live rendering, cursor syncing
 " Makes previewing my vimkikis hella easy
-Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install'  }
+Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install', 'for':['markdown','vimwiki'] }
   " nmap <leader>md <Plug>MarkdownPreviewToggle
   nmap <leader>m <Plug>MarkdownPreviewToggle
 
@@ -143,6 +143,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   " ==================
   " HANDLERS FUNCTIONS
   " ==================
+  let g:my_url_pattern ='https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\:\-\?\=\&]\+' 
   function! s:Link_handler()
     " Overrides the powerfull vimwiki <Enter> mapping to handle zettle-style
     " notes.
@@ -155,22 +156,18 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " URL
     " https://www.img.com
     " ![test](https://img.com) =)
-    let l:match = matchlist(l:word ,'https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\-\?\=]\+')
+    let l:match = matchlist(l:word , g:my_url_pattern)
     if len(l:match) > 0
       let l:url = l:match[0]
       echo "Opening " . l:url 
       call system('xdg-open ' . shellescape(l:url).' &')
       return
     endif
-    " markdown image ![blablabla](assets/link.{jpg|png|jpeg})
-    let l:match = matchlist(l:word ,'\!\[.\+\](\(assets/.\+\.\(png\|jpeg\|jpg\)\))')
-    if len(l:match) > 0
-      let l:img = g:VIMWIKI_DIR . '/' . l:match[1]
-      call system('xdg-open ' . shellescape(l:img) . ' &')
-      return
-    endif
-    " video link [title](assets/name.mp4)
-    let l:match = matchlist(l:word ,'[.\+\](\(assets/.\+\.mp4\))')
+    " assets:
+    " video link       [title](assets/name.mp4)
+    " markdown image  ![title](assets/name.{jpg|png|jpeg})
+    " pdf              [title](assets/name.pdf})
+    let l:match = matchlist(l:word ,'\!\?[.\+\](\(assets/.\+\))')
     if len(l:match) > 0
       let l:vid = g:VIMWIKI_DIR . '/' . l:match[1]
       call system('xdg-open ' . shellescape(l:vid) . ' &')
@@ -216,6 +213,25 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       return
     endif
   endfunction
+  function! GetBibID(file)
+    " Papers notes (should) contain the corresponding bibfile
+    " Extract the citation id from the file
+    " e.g.
+    " ```bib
+    " @article{srivastava2014dropout,
+    "   ...
+    " }
+    " ``` ---> srivastava2014dropout
+    let lines = readfile(g:VIMWIKI_DIR . "/" . a:file)
+    let l:found = match(l:lines, '@[^{]\+{\(.\+\),')
+    let l:is_bib = match(l:lines, '```bib')
+    let l:name = 'cite'
+    if l:found > 0 && l:found == l:is_bib + 1
+      let l:matches = matchlist(l:lines[l:found], '@[^{]\+{\(.\+\),')
+      let l:name = l:matches[1]
+    endif
+    return l:name
+  endfunction
   " ================
   " INSERT FUNCTIONS
   " ================
@@ -245,9 +261,9 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       " make the note title the same as bib title
       execute '%s/title\:.\+/title\: ' . tolower(@a) . '/'
       " add paper tag
-      execute '%s/tags\: /tags\: :paper:/'
+      execute '%s/tags\: /tags\: #paper#/'
       " sometimes an empty line appears, don't know why
-      execute '%s/}\n\n```/}\r```/'
+      " execute '%s/}\n\n```/}\r```/'
       return 1
     else
       " echo "Clipboard doesn't contain bib"
@@ -274,86 +290,9 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       return 0
     endif
   endfunction
-  " from https://neovim.io/doc/user/job_control.html
-  function! s:OnEvent(job_id, data, event) dict
-      if a:event == 'stdout'
-        let str = self.shell.' stdout: '.join(a:data)
-        echo str
-      else
-        echo self.shell . ": Download complete."
-        let g:job = -1
-      endif
-  endfunction
-  let s:callbacks = {
-    \ 'on_stdout': function('s:OnEvent'),
-    \ 'on_stderr': function('s:OnEvent'),
-    \ 'on_exit': function('s:OnEvent')
-    \ }
-  let g:job = -1
-  function! YoutubeDownloader(url, file)
-    let l:cmd = printf("youtube-dl -f 'best[height<=480]' --format mp4 -o '%s' %s", a:file, a:url)
-    let g:job = jobstart(['bash', '-c', l:cmd], extend({'shell': 'youtube-dl'}, s:callbacks))
-  endfunction
-  function! JobKill()
-    call jobstop(g:job1)
-    let g:job = -1
-  endfunction
-  let g:video_patterns = "youtu\\.be\\|www\\.youtube\\.com\\|vimeo\\.com"
-  function! Backup_video()
-    " Convert youtube URLs to links and backup content
-    " https://youtu.be/rbfFt2uNEyQ?t=5478           -> [video](assets/init_5f4e7.mp4)
-    " https://www.youtube.com/watch?v=Z_MA8CWKxFU   -> [video](assets/init_f5913.mp4)
-    " [test 1](https://youtu.be/rbfFt2uNEyQ?t=5478) -> [test 1](assets/init_f5782.mp4)
-    " [test 2](https://www.youtube.com/watch?v=Z_U) -> [test 2](assets/init_ee172.mp4)
-    " https://www.img.com                           -> https://www.img.com
-    py from uuid import uuid4
-    let l:url_pattern = 'https\?://\(' . g:video_patterns . '\)[^ )]\+'
-    let l:title_pattern = '\[\([^\]]\+\)\]'
-    let l:link_pattern =  l:title_pattern . '(' . l:url_pattern . ')'
-    let l:old = GetUnderCursor(l:link_pattern)
-    let l:word = l:old.match
-    if l:word == ''
-      let l:old = GetUnderCursor(l:url_pattern)
-      let l:word = l:old.match
-    endif
-    " get the url and the title (might not be present)
-    let l:url = matchlist(l:word , l:url_pattern)[0]
-    let l:title = matchlist(l:word , l:title_pattern)
-    if len(l:url) > 0
-      let l:file = expand('%:t:r')
-      let l:id = pyeval("uuid4().hex[:5]")
-      " name to use for backup
-      let l:link = "assets/" . l:file . '_' . l:id . '.mp4'
-      " location for backup
-      let l:path = g:VIMWIKI_DIR . '/' . l:link
-      let l:name = ""
-      " use previous title if present
-      if len(l:title) > 0
-        let l:name = l:title[1]
-      else
-        let l:name = 'video'
-      endif
-      " insert link into file
-      let l:new = "[".l:name."](" . l:link . ")"
-      " check if video actually exists
-      let l:vid_title = trim(system("youtube-dl -e " . shellescape(l:url)))
-      " echo l:vid_title
-      if v:shell_error == 0
-        let choice = confirm("Backup: " . l:vid_title . "?","&No\n&Yes")
-        if choice == 2
-          " download the video in the background
-          call YoutubeDownloader(shellescape(l:url), l:path)
-          call s:ReplaceCoords(l:new, l:old)
-        endif
-        return
-      else
-        echo "Video not found."
-      endif
-    endif
-  endfunction
   function! Insert_video_link()
     let l:url = @*
-    let l:match = matchlist(l:url ,'^https\?://' . g:video_patterns . '.\+$')
+    let l:match = matchlist(l:url ,'^https\?://' . g:stream_patterns . '.\+$')
     if len(l:match) > 0
       let l:img_link = '[video](' . l:url . ')'
       " put =l:img_link
@@ -374,9 +313,129 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       echo "Select something to make a link."
     endif
   endfunction
-  function! Make_emptynote()
-    execute "e " . Make_zettlenote()['path']
-    call s:Insert_header("","")
+  " ==============
+  " BACKUP HELPERS
+  " ==============
+  " from https://neovim.io/doc/user/job_control.html
+  " function! s:OnEvent(job_id, data, event) dict
+  "     if a:event == 'stdout'
+  "       let str = self.shell.' stdout: '.join(a:data)
+  "       echo str
+  "     else
+  "       echo self.shell . ": Download complete."
+  "       let g:job = -1
+  "     endif
+  " endfunction
+  " let s:callbacks = {
+  "   \ 'on_stdout': function('s:OnEvent'),
+  "   \ 'on_stderr': function('s:OnEvent'),
+  "   \ 'on_exit': function('s:OnEvent')
+  "   \ }
+  " let g:job = -1
+  " function! YoutubeDownloader(url, file)
+  "   let l:cmd = printf("youtube-dl -f 'best[height<=480]' --format mp4 -o '%s' %s", a:file, a:url)
+  "   let g:job = jobstart(['bash', '-c', l:cmd], extend({'shell': 'youtube-dl'}, s:callbacks))
+  " endfunction
+  " function! JobKill()
+  "   call jobstop(g:job1)
+  "   let g:job = -1
+  " endfunction
+  function! GetParts(url, title)
+    let l:title_pattern = '\[\([^\]]\+\)\]'
+    let l:link_pattern =  l:title_pattern . '(' . a:url . ')'
+    let l:search = GetUnderCursor(l:link_pattern)
+    let l:word = l:search.match
+    if l:word == ''
+      let l:search = GetUnderCursor(a:url)
+      let l:word = l:search.match
+    endif
+    let l:url = matchlist(l:word , a:url)
+    let l:title = matchlist(l:word , l:title_pattern)
+    if len(l:title) > 0
+      let l:name = l:title[1]
+    else
+      let l:name = a:title
+    endif
+    if len(l:url) > 0
+      let l:link = l:url[0]
+    else
+      let l:link = ""
+    endif
+      return [l:name, l:link, l:search]
+  endfunction
+  function! Backup_handler()
+    " Youtube backup
+    " match video-url or [name](video-url)
+    let l:stream_url = 'https\?://\(' . g:stream_patterns . '\)[^ )]\+'
+    let [l:title,l:url, l:old] = GetParts(l:stream_url, "stream")
+    if len(l:url) > 0
+      let l:file = Backup_stream(l:url)
+      if l:file != ""
+        let l:new = "[".l:title."](" . l:file . ")"
+        call s:ReplaceCoords(l:new, l:old)
+        return
+      endif
+    endif
+    " Pdf backup
+    let [l:title,l:url,l:old] = GetParts(g:my_url_pattern, "")
+    let l:ext =  matchlist(l:url,'\.\([a-z]\+\)$')[1]
+    if len(l:url) > 0
+      let l:file = Backup_url(l:url, l:ext)
+      if l:file != ""
+        let l:new = "[" . l:ext . "](" . l:file . ")"
+        call s:ReplaceCoords(l:new, l:old)
+        return
+      endif
+    endif
+    echo "No match found"
+    return
+  endfunction
+  let g:stream_patterns = "youtu\\.be\\|www\\.youtube\\.com\\|vimeo\\.com"
+  function! Backup_stream(url)
+    " Convert youtube URLs to links and backup content
+    " https://youtu.be/rbfFt2uNEyQ?t=5478           -> [video](assets/init_5f4e7.mp4)
+    " https://www.youtube.com/watch?v=Z_MA8CWKxFU   -> [video](assets/init_f5913.mp4)
+    " [test 1](https://youtu.be/rbfFt2uNEyQ?t=5478) -> [test 1](assets/init_f5782.mp4)
+    " [test 2](https://www.youtube.com/watch?v=Z_U) -> [test 2](assets/init_ee172.mp4)
+    " https://www.img.com                           -> https://www.img.com
+    " check if video actually exists
+    let l:vid_title = system("youtube-dl -e " . shellescape(a:url))
+    " shell_error == 1 is the previous system call has failed
+    if v:shell_error == 0
+      let choice = confirm("Backup: " . trim(l:vid_title) . "?","&No\n&Yes")
+      if choice == 2
+        let l:temp = shellescape(tempname()) 
+        " call YoutubeDownloader(shellescape(l:url), l:path)
+        echo "Downloading " . l:vid_title 
+        let l:cmd = "youtube-dl -f 'best[height<=480]' --format mp4 -o " . l:temp . " " . shellescape(a:url)
+        echo system(l:cmd)
+        let l:md5 = split(system('md5sum ' . l:temp), ' ')[0]
+        let l:link = "assets/" . l:md5 . ".mp4"
+        let l:cmd_mv = 'mv ' . l:temp . " " . g:VIMWIKI_DIR . "/" . l:link 
+        echo "Calculating md5..."
+        call system(l:cmd_mv)
+        echo "Done."
+      endif
+      return l:link
+    else
+      echo "Video not found."
+      return ""
+      " endif
+    " endif
+  endfunction
+  let g:user_agent = shellescape("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36")
+  function! Backup_url(url,ext)
+    let l:temp = shellescape(tempname())
+    let l:cmd_download = "wget --user-agent=" . g:user_agent . " -O " . l:temp . " " . shellescape(a:url)
+    echo "Backing up " . a:url
+    let l:out = system(l:cmd_download)
+    " echo l:out
+    let l:md5 = split(system('md5sum ' . l:temp), ' ')[0]
+    let l:link = "assets/" . l:md5 . "." . a:ext
+    let l:cmd_mv = 'mv ' . l:temp . " " . g:VIMWIKI_DIR . "/" . l:link
+    call system(l:cmd_mv)
+    echo "Saved to " . l:link
+    return l:link
   endfunction
   " =============
   " NOTE CREATION
@@ -392,6 +451,13 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " files requires the path
     return {"path" : l:path, "id" : l:id }
   endfunction
+  function! Make_emptynote()
+    execute "e " . Make_zettlenote()['path']
+    call s:Insert_header("","")
+  endfunction
+  " ============
+  " INFO HELPERS
+  " ============
   let s:CiteWin = -1
   function! s:Popup_cite()
     call s:Popup_cite_close()
@@ -402,10 +468,15 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
         let file = matchlist(search.match, '\[.\{-}\](\([^)]\+\.md\))')[1]
         let path = g:VIMWIKI_DIR . '/' . l:file
         if filereadable(l:path)
-          let line = readfile(l:path, '', 3)[-1]
-          let title = matchlist(l:line ,'^title: \(.*\)')
-          if len(l:title) > 1
-            call s:Popup_cite_open(l:title[1])
+          let line = readfile(l:path, '', 4)[-1]
+          let title_parts = matchlist(l:line ,'^title: \(.*\)')
+          " title line found
+          if len(l:title_parts) > 1 
+            let title = title_parts[1]
+            " title is not empty
+            if len(title) > 0
+              call s:Popup_cite_open(title)
+            endif
           endif
         endif
       endif
@@ -434,7 +505,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " autocmd InsertLeave <buffer> :update
     autocmd BufEnter <buffer> setlocal signcolumn=no
     " autocmd! CursorMoved *.md call s:Popup_cite()
-    autocmd! CursorMoved,WinLeave,BufLeave,FocusLost *.md call s:Popup_cite_close()
+    autocmd! CursorMoved,WinLeave,BufLeave,FocusLost,InsertEnter *.md call s:Popup_cite_close()
     autocmd! CursorHold *.md call s:Popup_cite()
     " Link navigation mappings
     nmap <buffer> <TAB> <Plug>VimwikiNextLink
@@ -454,7 +525,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " vim(W)iki (I)nsert (Y)outube
     " nmap <buffer> <leader>wiy :call Insert_video_link()<CR>
     " vim(W)iki (B)ackup (Y)outube 
-    nmap <buffer> <silent> <leader>wby :call Backup_video()<CR>
+    nmap <buffer> <leader>wbl :call Backup_handler()<CR>
     nmap <buffer> <CR> :call <SID>Link_handler()<CR>
     nmap <buffer> <C-Space> <Plug>VimwikiToggleListItem
     inoremap <C-v> <C-o>:call Paste_handler()<CR>
@@ -735,14 +806,15 @@ Plug 'junegunn/fzf.vim'
     " insert citations of structure [cite](<path>)
     " handles multiple lines as :
     " [cite](<path>),[cite](<path>),[cite](<path>)...
-    if len(a:lines) == 1
-      let citation= '[cite](' . split(a:lines[0],':')[0] . ')'
+    let l:lines = map(copy(a:lines), {key,val -> split(val,':')[0]})
+    if len(l:lines) == 1
+      let citation= '[' . GetBibID(l:lines[0]) . '](' . l:lines[0] . ')'
       call InsertAndMove(citation)
     else
-      let citation= '[cite](' . split(a:lines[0],':')[0] . ')'
+      let citation= '[' . GetBibID(l:lines[0]) . '](' . l:lines[0] . ')'
       call InsertAndMove(citation)
-      for line in a:lines[1:]
-        let citation= ',[cite](' . split(line,':')[0] . ')'
+      for line in l:lines[1:]
+        let citation= ',[' . GetBibID(line) . '](' . line . ')'
         call InsertAndMove(citation)
       endfor
     endif
@@ -872,7 +944,7 @@ Plug 'junegunn/fzf.vim'
       let g:fzf_handler_error = 0
       let g:fzf_handler_msg = ""
     else
-      let command_fmt = 'rg --line-number --no-heading --sortr=modified -T jupyter --color=always --smart-case %s %s || true'
+      let command_fmt = 'rg --line-number --with-filename --no-heading --sortr=modified -T jupyter --color=always --smart-case %s %s || true'
       let initial_command = printf(command_fmt, shellescape(a:query), a:files)
       let reload_command = printf(command_fmt, '{q}', a:files)
       let path = GitAwarePath()

@@ -120,11 +120,12 @@ bindsym $mod+k focus up
 bindsym $mod+l focus right
 bindsym $mod+h focus left
 
-# alternatively, you can use the cursor keys:
-# bindsym $mod+Left focus left
+# cycle through workspaces
+bindsym $mod+Left workspace prev_on_output
+bindsym $mod+Right workspace next_on_output
+
 # bindsym $mod+Down focus down
 # bindsym $mod+Up focus up
-# bindsym $mod+Right focus right
 
 # move focused window
 bindsym $mod+Shift+j move down
