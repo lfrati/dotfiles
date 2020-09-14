@@ -800,13 +800,15 @@ Plug 'junegunn/fzf.vim'
   " ==================
   " HANDLERS FUNCTIONS
   " ==================
+  " receive a list of files from Rg and perform actions on them
   let g:fzf_handler_error = 0
   let g:fzf_handler_msg = ""
   function! Cite_handler(lines)
-    " insert citations of structure [cite](<path>)
+    " insert citations as [bibID](<path>)
     " handles multiple lines as :
-    " [cite](<path>),[cite](<path>),[cite](<path>)...
-    let l:lines = map(copy(a:lines), {key,val -> split(val,':')[0]})
+    " [bibID](<path>),[bibID](<path>),[bibID](<path>)...
+    " note: skip the first element of lines because we ignore ctrl-l
+    let l:lines = map(copy(a:lines[1:]), {key,val -> split(val,':')[0]})
     if len(l:lines) == 1
       let citation= '[' . GetBibID(l:lines[0]) . '](' . l:lines[0] . ')'
       call InsertAndMove(citation)
@@ -821,10 +823,20 @@ Plug 'junegunn/fzf.vim'
   endfunction
   function! Rg_handler(lines)
     let l:lines = copy(a:lines)
-    " Not sure why the first element might be ''
-    if l:lines[0] == ''
-      let l:lines = a:lines[1:]
+    let l:filetype = &filetype
+    " Ctrl-l is used to reference notes (l->link)
+    if l:lines[0] == 'ctrl-l'
+      if l:filetype == "vimwiki"
+        let l:path = split(l:lines[1],":")[0]      
+        let l:name = expand('<cWORD>')
+        call s:Insert_link(l:name, l:path)
+      endif
+      return
+    else
+      let l:lines = l:lines[1:]
     endif
+    " If only one file is selected open it, otherwise populate the
+    " quickfixlist
     if len(l:lines) == 1
       let l:parts = split(l:lines[0],":")
       let l:file = l:parts[0]
@@ -850,13 +862,18 @@ Plug 'junegunn/fzf.vim'
       cc
     endif
   endfunction
-  function! Qfix_handler()
+  " ================
+  " SEARCH SELECTORS
+  " ================
+  " return a set of files to be searched, e.g. quickfix files,
+  " incoming/outgoing links, buffer history...
+  function! Qfix_selector()
     " returns the list of files in the quickfix list, items in the list are
     " assumed to be unique (enforced by populating it with the Rg_handler)
     let files = join(map(getqflist(), {key,val -> split(bufname(val.bufnr),'/')[-1]}))
     return files
   endfunction
-  function! Incoming_handler()
+  function! Incoming_selector()
     " returns the vimwiki files that contain links to the current file
     let node = expand("%:t")
     let pattern = "\\[.+\\]\\(" . l:node . "\\)"
@@ -869,7 +886,7 @@ Plug 'junegunn/fzf.vim'
     endif
     return join(UniqList(l:files))
   endfunction
-  function! Outgoing_handler()
+  function! Outgoing_selector()
     " from https://vim.fandom.com/wiki/Copy_search_matches
     " 1. clear register a
     " 2. search for lines matching (title)[year_month_day_id.md]
@@ -892,7 +909,7 @@ Plug 'junegunn/fzf.vim'
   " Keep track of buffers visited inside the vimwiki (using a filetype based
   " autocmd)
   let g:buff_hist = []
-  let g:buff_hist_size = 10
+  let g:buff_hist_size = 50
   function! BuffHist_update()
     let l:bufname = bufname()
     if l:bufname != '' &&  fnamemodify(l:bufname,":p:h") == g:VIMWIKI_DIR
@@ -911,7 +928,7 @@ Plug 'junegunn/fzf.vim'
       endif
     endif
   endfunction
-  function! BuffHist_handler()
+  function! BufHist_selector()
     let l:files_list = ""
     if len(g:buff_hist) < 2
       let g:fzf_handler_error = 1
@@ -921,16 +938,6 @@ Plug 'junegunn/fzf.vim'
     endif
     return l:files_list
   endfunction 
-  function! FZFLink_handler(lines)
-    " Create link to alternate-file
-    if len(a:lines) == 1
-      let l:path = split(a:lines[0],":")[0]      
-      let l:name = expand('<cWORD>')
-      call s:Insert_link(l:name, l:path)
-    else
-      echo "Select ONE file."
-    endif
-  endfunction
   " ================
   " SEARCH FUNCTIONS
   " ================
@@ -938,20 +945,28 @@ Plug 'junegunn/fzf.vim'
   " fuzzy searching (--phony)
   function! RipgrepFZF(query, fullscreen, sink, files)
     " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
-    " line-number is needed for the preview
     if g:fzf_handler_error
       echohl WarningMsg | echo g:fzf_handler_msg  | echohl None
       let g:fzf_handler_error = 0
       let g:fzf_handler_msg = ""
     else
+      " line-number is needed for the preview
+      " '|| true' prevents showing 'command failed ...' when nothing is matched
       let command_fmt = 'rg --line-number --with-filename --no-heading --sortr=modified -T jupyter --color=always --smart-case %s %s || true'
       let initial_command = printf(command_fmt, shellescape(a:query), a:files)
       let reload_command = printf(command_fmt, '{q}', a:files)
       let path = GitAwarePath()
+      " options = 
+      " sink*: function to handle the selected files
+      " bind : restart rg search when the typed string changes
+      " phony: turns off searching with fzf and lets rg do all the work (o.w.
+      " fzf would search in the strings returned by rg)
+      " ansi : shows the colored output of rg (--color=always) as actual colors
       let spec = { 
                \ 'source' : initial_command,
                \ 'sink*' : function(a:sink),
                \ 'options':[ '--bind', 'change:reload:' . reload_command,
+                           \ '--expect=ctrl-l',
                            \ '--phony',
                            \ '--ansi',
                            \ '--multi'],
@@ -961,22 +976,15 @@ Plug 'junegunn/fzf.vim'
     endif
   endfunction
   function! PapersFZF(query, fullscreen, sink)
-    " Adapted from https://github.com/junegunn/fzf.vim#example-advanced-rg-command
-    " line-number/column is needed for the preview
-    " '|| true' prevents showing 'command failed ...' when nothing is matched
+    " Search with ripgrep only in files that contain the paper tags
     let command_fmt = 'rg \#paper\(-toread\)\?\# -l | xargs rg --line-number --column --color=always --smart-case -- %s || true'
     let initial_command = printf(command_fmt, shellescape(a:query))
     let reload_command = printf(command_fmt, '{q}')
-    " options = 
-    " sink*: function to handle the selected files
-    " bind : restart rg search when the typed string changes
-    " phony: turns off searching with fzf and lets rg do all the work (o.w.
-    " fzf would search in the strings returned by rg)
-    " ansi : shows the colored output of rg (--color=always) as actual colors
     let spec = {
              \ 'source' : initial_command,
              \ 'sink*': function(a:sink),
              \ 'options':[ '--bind', 'change:reload:'.reload_command,
+                         \ '--expect=ctrl-l',
                          \ '--phony',
                          \ '--ansi',
                          \ '--multi'],
@@ -987,15 +995,18 @@ Plug 'junegunn/fzf.vim'
   " ============
   " FZF COMMANDS
   " ============
+  " EXACT SEARCHES
+  " These commands use fzf with -phony so all the work is done by ripgrep
   command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0, "Rg_handler") 
   command! -nargs=* -bang Cite call PapersFZF(<q-args>, <bang>0, "Cite_handler") 
   command! -nargs=* -bang MyRg call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", "") 
-  command! -nargs=* -bang Qf call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", Qfix_handler()) 
-  command! -nargs=* -bang Incoming call RipgrepFZF("^title: ", 0, "Rg_handler", Incoming_handler())
-  command! -nargs=* -bang Outgoing call RipgrepFZF("^title: ", 0, "Rg_handler", Outgoing_handler())
-  command! -nargs=* -bang History call RipgrepFZF("^title: ", 0, "FZFLink_handler", BuffHist_handler())
-  " ->Fuzzy<- searching of tags in my vimwiki, most of the other commands use
-  "  rg for search and fzf with -phony just for the interface
+  command! -nargs=* -bang Qf call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", Qfix_selector()) 
+  command! -nargs=* -bang Incoming call RipgrepFZF("^title: ", 0, "Rg_handler", Incoming_selector())
+  command! -nargs=* -bang Outgoing call RipgrepFZF("^title: ", 0, "Rg_handler", Outgoing_selector())
+  command! -nargs=* -bang History call RipgrepFZF("^title: ", 0, "Rg_handler", BufHist_selector())
+  " FUZZY SEARCHES 
+  " Other commands use fzf with -phony so all the work is done by ripgrep
+  " These commands instead use fzf to fuzzy search in ripgrep's results
   command! -nargs=* -bang Tags
   \ call fzf#vim#grep(
   \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -e ^tags: -- ', 1,
@@ -1014,21 +1025,13 @@ Plug 'junegunn/fzf.vim'
   nnoremap <leader>fl :Lines<CR>
   " Crazy mnemonics here. 
   " frg -> (F)ZF (R)ip(G)rep
-  " frz -> (F)ZF (R)ipGrep (F)uzzy
+  " frf -> (F)ZF (R)ipGrep (F)uzzy
   " frw -> (F)ZF (R)ipGrep current (W)ord
   nnoremap <leader>frg :MyRg<CR>
-  nnoremap <leader>frz :FZFiles<CR>
+  nnoremap <leader>frf :FZFiles<CR>
   nnoremap <leader>frw :MyRg <C-R><C-W><CR>
   " Vimwiki specific bindings that use FZF
   function! GoVimwiki_FZF()
-    " Old mappings
-    " nnoremap <buffer> <leader>ft :Tags<CR>
-    " nnoremap <buffer> <leader>fq :Qf<CR>
-    " nnoremap <buffer> <leader>fp :Papers<CR>
-    " nnoremap <buffer> <leader>fc :Cite<CR>
-    " nnoremap <buffer> <leader>fi :Incoming<CR>
-    " nnoremap <buffer> <leader>fo :Outgoing<CR>
-    " nnoremap <buffer> <leader>fh :History<CR>
     " Mappings start with W for vimwiki, the ones that perform some search
     " then use F, the ones that insert something use I
     " e.g. wft -> vim(W)iki (F)zf    (T)ags
