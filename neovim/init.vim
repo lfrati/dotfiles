@@ -26,6 +26,9 @@ sunmap <Space>
 " mapleader has to be up here because it works only on what comes after
 let mapleader=' '
 let maplocalleader=' '
+  
+let g:MY_VIMWIKIDIR = $HOME . "/Dropbox/vimwiki"
+" let g:ruby_host_prog = '/home/lapo/.gem/ruby/2.7.0/bin/neovim-ruby-host'
 
 " }}}
 " ============================================================================
@@ -41,6 +44,16 @@ call plug#begin('~/.vim/plugged')
 
 " Plug 'ndmitchell/ghcid', { 'rtp': 'plugins/nvim' }
 " Plug 'neovimhaskell/haskell-vim'
+
+" needed because of https://github.com/neovim/neovim/issues/1496
+Plug 'lambdalisue/suda.vim'
+
+Plug 'mhinz/vim-startify'
+ let g:startify_bookmarks = [ 
+       \ {'v': g:MY_VIMWIKIDIR . '/index.md' },
+       \ {'c': $MYVIMRC },
+       \ ]
+ let g:startify_padding_left = 3
 
 Plug 'tpope/vim-unimpaired'
 
@@ -59,7 +72,7 @@ Plug 'airblade/vim-gitgutter'
     return printf('+%d ~%d -%d', a, m, r)
   endfunction
 
-Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript']}
+Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript','json']}
   " TextEdit might fail if hidden is not set.
   set hidden
   " Some servers have issues with backup files, see #649.
@@ -138,12 +151,11 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
                         \ 'auto_tags': 1,
                         \ 'auto_diary_index': 1,
                         \ 'custom_wiki2html': '/home/lapo/dotfiles/neovim/wiki2html.sh'}]
-  let g:VIMWIKI_DIR = $HOME . "/Dropbox/vimwiki"
   let g:vimwiki_tag_format = {'pre_mark': '#', 'post_mark': '#', 'sep': ':'}
   " ==================
   " HANDLERS FUNCTIONS
   " ==================
-  let g:my_url_pattern ='https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\:\-\?\=\&]\+' 
+  let g:MY_URLPATTERN ='https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\:\-\?\=\&\~]\+' 
   function! s:Link_handler()
     " Overrides the powerfull vimwiki <Enter> mapping to handle zettle-style
     " notes.
@@ -156,7 +168,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " URL
     " https://www.img.com
     " ![test](https://img.com) =)
-    let l:match = matchlist(l:word , g:my_url_pattern)
+    let l:match = matchlist(l:word , g:MY_URLPATTERN)
     if len(l:match) > 0
       let l:url = l:match[0]
       echo "Opening " . l:url 
@@ -169,7 +181,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " pdf              [title](assets/name.pdf})
     let l:match = matchlist(l:word ,'\!\?[.\+\](\(assets/.\+\))')
     if len(l:match) > 0
-      let l:vid = g:VIMWIKI_DIR . '/' . l:match[1]
+      let l:vid = g:MY_VIMWIKIDIR . '/' . l:match[1]
       call system('xdg-open ' . shellescape(l:vid) . ' &')
       return
     endif
@@ -222,7 +234,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     "   ...
     " }
     " ``` ---> srivastava2014dropout
-    let lines = readfile(g:VIMWIKI_DIR . "/" . a:file)
+    let lines = readfile(g:MY_VIMWIKIDIR . "/" . a:file)
     let l:found = match(l:lines, '@[^{]\+{\(.\+\),')
     let l:is_bib = match(l:lines, '```bib')
     let l:name = 'cite'
@@ -272,14 +284,14 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   endfunction
   function! s:Insert_PNG()
   " If there is an img in the clipboard save it to
-  " VIMWIKI_DIR/assets/filename_rndmst and insert an image link
+  " MY_VIMWIKIDIR/assets/filename_rndmst and insert an image link
     py from uuid import uuid4
     let l:avail = system('xclip -selection clipboard -t TARGETS -o')
     if l:avail =~ 'image/png'
       let l:file = expand('%:t:r')
       let l:id = pyeval("uuid4().hex[:5]")
       let l:link = "assets/" . l:file . '_' . l:id . '.png'
-      let l:path = g:VIMWIKI_DIR . '/' . l:link
+      let l:path = g:MY_VIMWIKIDIR . '/' . l:link
       call system('xclip -selection clipboard -t image/png -o > ' . l:path)
       echo "Image saved to " . l:path
       let l:img_link = '![img]('.l:link . ')'
@@ -291,10 +303,15 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     endif
   endfunction
   function! Insert_video_link()
-    let l:url = @*
+    let l:url = @+
     let l:match = matchlist(l:url ,'^https\?://' . g:stream_patterns . '.\+$')
     if len(l:match) > 0
-      let l:img_link = '[video](' . l:url . ')'
+      echo "Pasting video"
+      let l:vid_title = trim(system("youtube-dl -e " . shellescape(l:url)))
+      if l:vid_title == ''
+        let l:vid_title = "video"
+      endif
+      let l:img_link = '['.l:vid_title.'](' . l:url . ')'
       " put =l:img_link
       execute "normal! A" . l:img_link 
       return 1
@@ -368,6 +385,9 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " match video-url or [name](video-url)
     let l:stream_url = 'https\?://\(' . g:stream_patterns . '\)[^ )]\+'
     let [l:title,l:url, l:old] = GetParts(l:stream_url, "stream")
+    if l:title == ''
+      let l:title = 'stream'
+    endif
     if len(l:url) > 0
       let l:file = Backup_stream(l:url)
       if l:file != ""
@@ -377,12 +397,16 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       endif
     endif
     " Pdf backup
-    let [l:title,l:url,l:old] = GetParts(g:my_url_pattern, "")
-    let l:ext =  matchlist(l:url,'\.\([a-z]\+\)$')[1]
+    let [l:title,l:url,l:old] = GetParts(g:MY_URLPATTERN, "")
+    let l:ext = matchlist(l:url,'\.\([a-z]\+\)$')[1]
+    if l:title == ''
+      " use extension as title
+      let l:title = l:ext 
+    endif
     if len(l:url) > 0
       let l:file = Backup_url(l:url, l:ext)
       if l:file != ""
-        let l:new = "[" . l:ext . "](" . l:file . ")"
+        let l:new = "[" . l:title . "](" . l:file . ")"
         call s:ReplaceCoords(l:new, l:old)
         return
       endif
@@ -411,7 +435,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
         echo system(l:cmd)
         let l:md5 = split(system('md5sum ' . l:temp), ' ')[0]
         let l:link = "assets/" . l:md5 . ".mp4"
-        let l:cmd_mv = 'mv ' . l:temp . " " . g:VIMWIKI_DIR . "/" . l:link 
+        let l:cmd_mv = 'mv ' . l:temp . " " . g:MY_VIMWIKIDIR . "/" . l:link 
         echo "Calculating md5..."
         call system(l:cmd_mv)
         echo "Done."
@@ -421,7 +445,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       echo "Video not found."
       return ""
       " endif
-    " endif
+    endif
   endfunction
   let g:user_agent = shellescape("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36")
   function! Backup_url(url,ext)
@@ -432,7 +456,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " echo l:out
     let l:md5 = split(system('md5sum ' . l:temp), ' ')[0]
     let l:link = "assets/" . l:md5 . "." . a:ext
-    let l:cmd_mv = 'mv ' . l:temp . " " . g:VIMWIKI_DIR . "/" . l:link
+    let l:cmd_mv = 'mv ' . l:temp . " " . g:MY_VIMWIKIDIR . "/" . l:link
     call system(l:cmd_mv)
     echo "Saved to " . l:link
     return l:link
@@ -446,7 +470,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     py from uuid import uuid4
     py from datetime import datetime
     let l:id = pyeval("datetime.today().strftime('%Y_%m_%d_') + uuid4().hex[:8]") . ".md"
-    let l:path = g:VIMWIKI_DIR . "/". l:id
+    let l:path = g:MY_VIMWIKIDIR . "/". l:id
     " return path and id because vimwiki links only need the id but opening
     " files requires the path
     return {"path" : l:path, "id" : l:id }
@@ -466,7 +490,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     if search.match != ''
       if s:CiteWin < 0
         let file = matchlist(search.match, '\[.\{-}\](\([^)]\+\.md\))')[1]
-        let path = g:VIMWIKI_DIR . '/' . l:file
+        let path = g:MY_VIMWIKIDIR . '/' . l:file
         if filereadable(l:path)
           let line = readfile(l:path, '', 4)[-1]
           let title_parts = matchlist(l:line ,'^title: \(.*\)')
@@ -650,6 +674,7 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     else
       " return ' ' . l:head . ' ' . GitChunks()
       return ' ' . l:head
+    endif
   endfunction
   " Show file path relative to git root or absolutepath
   " https://github.com/itchyny/lightline.vim/issues/293h
@@ -661,7 +686,7 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     endif
     return expand('%')
   endfunction
-  function SetupLightlineColors() abort
+  function! SetupLightlineColors() abort
     " transparent background in statusbar
     let l:palette = lightline#palette()
                                        "guibg,    guifg,   ctermbg, ctermfg"
@@ -807,7 +832,11 @@ Plug 'junegunn/fzf.vim'
     " insert citations as [bibID](<path>)
     " handles multiple lines as :
     " [bibID](<path>),[bibID](<path>),[bibID](<path>)...
-    " note: skip the first element of lines because we ignore ctrl-l
+    " note: skip the first element of a:lines because we ignore ctrl-l
+    if a:lines[0] == 'ctrl-l'
+      echo a:lines
+      return
+    endif
     let l:lines = map(copy(a:lines[1:]), {key,val -> split(val,':')[0]})
     if len(l:lines) == 1
       let citation= '[' . GetBibID(l:lines[0]) . '](' . l:lines[0] . ')'
@@ -825,7 +854,10 @@ Plug 'junegunn/fzf.vim'
     let l:lines = copy(a:lines)
     let l:filetype = &filetype
     " Ctrl-l is used to reference notes (l->link)
-    if l:lines[0] == 'ctrl-l'
+    if l:lines[0] == 'ctrl-l' 
+      if len(l:lines) > 2 " only insert link if 1 files is selected, no multiselect
+        return
+      endif
       if l:filetype == "vimwiki"
         let l:path = split(l:lines[1],":")[0]      
         let l:name = expand('<cWORD>')
@@ -842,7 +874,7 @@ Plug 'junegunn/fzf.vim'
       let l:file = l:parts[0]
       let l:linenum = l:parts[1]
       cclose
-      if fnamemodify(l:file,":p:h") == g:VIMWIKI_DIR
+      if fnamemodify(l:file,":p:h") == g:MY_VIMWIKIDIR
         " vimwiki open_link based on the default wiki, no need for full path
         call vimwiki#base#open_link("e",l:file)
       else
@@ -878,7 +910,7 @@ Plug 'junegunn/fzf.vim'
     let node = expand("%:t")
     let pattern = "\\[.+\\]\\(" . l:node . "\\)"
     let command_fmt = 'rg --no-heading --sortr=modified %s '
-    let cmd = printf("cd " . g:VIMWIKI_DIR . " && " . command_fmt, shellescape(l:pattern))
+    let cmd = printf("cd " . g:MY_VIMWIKIDIR . " && " . command_fmt, shellescape(l:pattern))
     let files = map(split(system(cmd), '\n'), {key,val -> split(v:val,':')[0]})
     if len(files) == 0
       let g:fzf_handler_error = 1
@@ -912,7 +944,7 @@ Plug 'junegunn/fzf.vim'
   let g:buff_hist_size = 50
   function! BuffHist_update()
     let l:bufname = bufname()
-    if l:bufname != '' &&  fnamemodify(l:bufname,":p:h") == g:VIMWIKI_DIR
+    if l:bufname != '' &&  fnamemodify(l:bufname,":p:h") == g:MY_VIMWIKIDIR
       let l:filename = fnamemodify(l:bufname,":t")
       " if the buffer corresponds to a markdown file add it to the list
       " the filetype check should ensure this, but just to be sure
@@ -988,7 +1020,7 @@ Plug 'junegunn/fzf.vim'
                          \ '--phony',
                          \ '--ansi',
                          \ '--multi'],
-             \ 'dir':g:VIMWIKI_DIR
+             \ 'dir':g:MY_VIMWIKIDIR
              \ }
     call fzf#run(fzf#wrap(fzf#vim#with_preview(spec)))
   endfunction
@@ -1010,9 +1042,9 @@ Plug 'junegunn/fzf.vim'
   command! -nargs=* -bang Tags
   \ call fzf#vim#grep(
   \   'rg --column --no-line-number --no-heading --sortr=modified --color=always --smart-case -e ^tags: -- ', 1,
-  \   fzf#vim#with_preview({'dir' : g:VIMWIKI_DIR}), <bang>0)
+  \   fzf#vim#with_preview({'dir' : g:MY_VIMWIKIDIR}), <bang>0)
   " Like rg but with fuzzy finding
-  command! -nargs=* -bang FZFiles
+  command! -nargs=* -bang FZFrg
   \ call fzf#vim#grep(
   \   'rg --column --line-number --no-heading --sortr=modified --color=always --smart-case -- '.shellescape(<q-args>), 1,
   \   fzf#vim#with_preview({'dir' : GitAwarePath()}), <bang>0)  
@@ -1028,7 +1060,7 @@ Plug 'junegunn/fzf.vim'
   " frf -> (F)ZF (R)ipGrep (F)uzzy
   " frw -> (F)ZF (R)ipGrep current (W)ord
   nnoremap <leader>frg :MyRg<CR>
-  nnoremap <leader>frf :FZFiles<CR>
+  nnoremap <leader>frf :FZFrg<CR>
   nnoremap <leader>frw :MyRg <C-R><C-W><CR>
   " Vimwiki specific bindings that use FZF
   function! GoVimwiki_FZF()
@@ -1233,15 +1265,12 @@ set inccommand=split
 let g:python3_host_prog="/home/lapo/miniconda3/envs/neovim3/bin/python"
 let g:python_host_prog="/home/lapo/miniconda3/envs/neovim2/bin/python"
 
-" Allows you to save files you opened without write permissions via sudo
-" cmap w!! w !sudo tee %
-
 " }}}
 " ============================================================================
 " Utilities {{{
 " ============================================================================
 
-function AllMatches(text,pattern)
+function! AllMatches(text,pattern)
   let matches = []
   let cursor = 0
   let safety = 0
@@ -1347,6 +1376,9 @@ command! -nargs=0 -bar Qargs execute 'args ' . s:QuickfixNames()
 " endfunction
 " nnoremap <leader>g :call <SID>QuickGetLine(input('Line to copy: '))<CR>
 
+" ======================
+" FREQUENTLY USED LEADER
+" ======================
 " Use capital W as a shortcut to save and quit
 " nnoremap W :w<CR>
 " nnoremap Q :q<CR>
@@ -1358,19 +1390,14 @@ command! -nargs=0 -bar Qargs execute 'args ' . s:QuickfixNames()
 " Maybe... s as in Save?
 nnoremap <Leader>s :w<CR>
 nnoremap <Leader>q :q<CR>
-" execute current line in shell and paste results under it
-" nmap <leader>e :exec 'r!'.getline('..')<CR>
-" execute current line in shell and paste results above it
-" nnoremap <leader>ex !!bash<CR>
-nnoremap <leader>e !!bash<CR>
 " easily open and source neovim config file
 " nnoremap <leader>conf :e $MYVIMRC<CR>
 nnoremap <leader>c :e $MYVIMRC<CR>
-" alternate between current file and previous file
-nnoremap <leader>p <C-^> 
-" insert date
-nnoremap <leader>d :execute "normal! i" . strftime('%Y-%m-%d')<CR>
-
+" Vim's (d)elete is more like a cut.
+" use leader d to really delete something, i.e. cut to blackhole register _
+nnoremap <leader>d "_d
+xnoremap <leader>d "_d
+xnoremap <leader>p "_dP
 " nnoremap <leader>d :put =strftime('%Y-%m-%d')<CR>
 " Switch CWD to the directory of the open buffer
 " nnoremap <leader>cd :cd %:p:h<cr>:pwd<cr>
@@ -1380,18 +1407,33 @@ function! s:ToggleScratchpad()
   if l:file ==? "buffer.md"
     bd
   else
-    execute "e " . g:VIMWIKI_DIR . "/buffer.md"
+    execute "e " . g:MY_VIMWIKIDIR . "/buffer.md"
   endif
 endfunction
 nnoremap <leader>= :call <SID>ToggleScratchpad()<CR>
+" easily close buffer (used constantly)
 nnoremap <leader>- :bd<Cr>
+
+" ===================
+" INFREQUENT MAPPINGS (use double leader)
+" ===================
+" insert date
+nnoremap <leader><leader>d :execute "normal! i" . strftime('%Y-%m-%d')<CR>
+" execute current line in shell and paste results under it
+" nmap <leader>e :exec 'r!'.getline('..')<CR>
+" execute current line in shell and paste results above it
+" nnoremap <leader>ex !!bash<CR>
+nnoremap <leader><leader>e !!bash<CR>
+" alternate between current file and alternate file
+nnoremap <leader><leader>a <C-^> 
+" Dictionary (l)ookup
+" nnoremap <leader>l :execute "!xdg-open https://www.merriam-webster.com/dictionary/" . expand('<cword>')<CR>
+nnoremap <leader><leader>l :execute "!xdg-open \"https://www.dictionary.com/browse/" . expand('<cword>') . "?s=t\""<CR>
+
 " nnoremap <leader>wc :echo wordcount()["words"]<CR>
 " Type a replacement term and press . to repeat the replacement again. Useful
 " for replacing a few instances of the term (comparable to multiple cursors)
 nnoremap <silent> s* :let @/='\<'.expand('<cword>').'\>'<CR>cgn
-" Dictionary lookup
-" nnoremap <leader>l :execute "!xdg-open https://www.merriam-webster.com/dictionary/" . expand('<cword>')<CR>
-nnoremap <leader>l :execute "!xdg-open \"https://www.dictionary.com/browse/" . expand('<cword>') . "?s=t\""<CR>
 
 " Delete trailing white space on save, useful for some filetypes ;)
 fun! CleanExtraSpaces()
@@ -1401,7 +1443,6 @@ fun! CleanExtraSpaces()
     call setpos('.', save_cursor)
     call setreg('/', old_query)
 endfun
-
 function! EchoWarning(msg)
   echohl WarningMsg
   echo  a:msg
@@ -1413,6 +1454,10 @@ augroup vimrccmds     " Source vim configuration upon save
     autocmd BufWritePost $MYVIMRC nested so % | call EchoWarning("Reloaded " . $MYVIMRC) | redraw
     autocmd BufWritePre *.txt,*.js,*.py,*.wiki,*.sh,*.coffee :call CleanExtraSpaces()
 augroup END
+
+" 2020-09-14 : doesn't work in neovim yet https://github.com/neovim/neovim/issues/12330
+" Allows you to save files you opened without write permissions via sudo
+" cmap w!! w !sudo tee %
 
 " Easier split navigation
 nnoremap <C-J> <C-W><C-J>
