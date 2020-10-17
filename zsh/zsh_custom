@@ -141,3 +141,19 @@ waconfig(){
     xsetwacom set $padID Button "$e" "button 0"
   done
 }
+
+vtt2txt(){
+  # from https://stackoverflow.com/questions/56927772/convert-webvtt-file-from-youtube-to-plain-text
+  sed -e '1,4d' -E -e '/^$|]|>$|%$/d' $1 | awk '!seen[$0]++' | tr '\n' ' '
+}
+
+yt2txt(){
+  TMP=$(mktemp)
+  echo $TMP
+  youtube-dl --write-auto-sub -o $TMP --skip-download $1
+  VTT="$TMP.en.vtt"
+  echo $VTT
+  vtt2txt $VTT
+  rm $VTT
+  rm $TMP
+}
