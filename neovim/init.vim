@@ -26,7 +26,7 @@ sunmap <Space>
 " mapleader has to be up here because it works only on what comes after
 let mapleader=' '
 let maplocalleader=' '
-  
+
 let g:MY_VIMWIKIDIR = $HOME . "/Dropbox/vimwiki"
 " let g:ruby_host_prog = '/home/lapo/.gem/ruby/2.7.0/bin/neovim-ruby-host'
 
@@ -42,20 +42,21 @@ syntax on
 
 call plug#begin('~/.vim/plugged')
 
-" Plug 'ndmitchell/ghcid', { 'rtp': 'plugins/nvim' }
-" Plug 'neovimhaskell/haskell-vim'
-
 " needed because of https://github.com/neovim/neovim/issues/1496
 Plug 'lambdalisue/suda.vim'
 
+Plug 'ap/vim-css-color'
+
 Plug 'mhinz/vim-startify'
- let g:startify_bookmarks = [ 
+ let g:startify_bookmarks = [
        \ {'v': g:MY_VIMWIKIDIR . '/index.md' },
        \ {'c': $MYVIMRC },
        \ ]
  let g:startify_padding_left = 3
 
 Plug 'tpope/vim-unimpaired'
+
+Plug 'ajh17/VimCompletesMe'
 
 Plug 'JuliaEditorSupport/julia-vim'
 
@@ -66,60 +67,76 @@ Plug 'plasticboy/vim-markdown'
   let g:vim_markdown_folding_disabled = 1
 
 Plug 'airblade/vim-gitgutter'
-  let g:gitgutter_map_keys = 0 
+  let g:gitgutter_map_keys = 0
   function! GitChunks()
     let [a,m,r] = GitGutterGetHunkSummary()
     return printf('+%d ~%d -%d', a, m, r)
   endfunction
 
-Plug 'neoclide/coc.nvim', {'branch': 'release', 'for':['python','javascript','json']}
-  " TextEdit might fail if hidden is not set.
-  set hidden
-  " Some servers have issues with backup files, see #649.
-  set nobackup
-  set nowritebackup
-  " Give more space for displaying messages.
-  set cmdheight=2
-  " Having longer updatetime (default is 4000 ms = 4 s) leads to noticeable
-  " delays and poor user experience.
-  set updatetime=300
-  " Don't pass messages to |ins-completion-menu|.
-  set shortmess+=c
-  " Always show the signcolumn, otherwise it would shift the text each time
-  " diagnostics appear/become resolved.
-  " set signcolumn=yes
-  function! s:check_back_space() abort
-    let col = col('.') - 1
-    return !col || getline('.')[col - 1]  =~# '\s'
+" post install (yarn install | npm install) then load plugin only for editing supported files
+Plug 'prettier/vim-prettier', { 'do': 'yarn install' }
+
+Plug 'fisadev/vim-isort'
+
+Plug 'psf/black', { 'branch': 'stable' }
+augroup pycmds
+  autocmd! pycmds
+  autocmd BufWritePre *.py execute ':Isort'
+  autocmd BufWritePre *.py execute ':Black'
+  " I've found a bug where sometimes black messes up Semshi's highlighting
+  " this is a horrible fix. God have mercy.
+  autocmd BufWritePost *.py execute ':Semshi highlight'
+augroup end
+
+Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
+  function MySemshiColors()
+      hi semshiGlobal          ctermfg=red
+      hi semshiLocal           ctermfg=209
+      hi semshiGlobal          ctermfg=214
+      hi semshiImported        ctermfg=180
+      hi semshiParameter       ctermfg=75
+      hi semshiParameterUnused ctermfg=117  cterm=underline
+      hi semshiFree            ctermfg=218
+      hi semshiBuiltin         ctermfg=207
+      hi semshiAttribute       ctermfg=49
+      hi semshiSelf            ctermfg=249
+      hi semshiUnresolved      ctermfg=226  cterm=underline
+      hi semshiSelected        ctermfg=40 ctermbg=bg
+      hi semshiErrorSign       ctermfg=231  ctermbg=160
+      hi semshiErrorChar       ctermfg=231  ctermbg=160
+      sign define semshiError text=E> texthl=semshiErrorSign
   endfunction
-  " Use K to show documentation in preview window.
-  function! s:show_documentation()
-    if (index(['vim','help'], &filetype) >= 0)
-      execute 'h '.expand('<cword>')
-    else
-      call CocAction('doHover')
-    endif
+  function GoSemshi()
+      nmap <buffer> <silent> <leader>rn :Semshi rename<CR>
+      nmap <buffer> <silent> <leader>er :Semshi goto error<CR>
   endfunction
-  " Use tab for trigger completion with characters ahead and navigate.
-  " NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
-  " other plugin before putting this into your config.
-  fun! GoCoc()
-    inoremap <buffer> <silent><expr> <TAB>
-          \ pumvisible() ? "\<C-n>" :
-          \ <SID>check_back_space() ? "\<TAB>" :
-          \ coc#refresh()
-    inoremap <buffer> <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
-    nmap <buffer> <silent> gd <Plug>(coc-definition)
-    nmap <buffer> <silent> gr <Plug>(coc-references)
-    nmap <buffer> <silent> <leader>rn <Plug>(coc-rename)
-    " nmap <buffer> <silent> <leader>isort :Isort<CR>
-    nnoremap <buffer> <silent> K :call <SID>show_documentation()<CR>
-    nnoremap <buffer> <silent> <leader>coc  :<C-u>CocList<CR>
-  endfun
-  augroup cocbindings
-    autocmd! cocbindings
-    autocmd Filetype json,python,javascript :call GoCoc()
+  augroup semshicmds
+    autocmd! semshicmds
+    autocmd FileType python call GoSemshi()
+    autocmd ColorScheme * call MySemshiColors()
   augroup end
+
+Plug 'jeetsukumaran/vim-pythonsense'
+  " class OneRing(object):             -----------------------------+
+  "                                    --------------------+        |
+  "     def __init__(self):                                |        |
+  "         print("One ring to ...")                       |        |
+  "                                                        |        |
+  "     def rule_them_all(self):                           |        |
+  "         self.find_them()                               |        |
+  "                                                        |        |
+  "     def find_them(self):           ------------+       |        |
+  "         a = [3, 7, 9, 1]           ----+       |       |        |
+  "         self.bring_them(a)             |- `if` |- `af` |- `ic`  | - `ac`
+  "         self.bind_them("darkness") ----+       |       |        |
+  "                                    ------------+       |        |
+  "     def bring_them_all(self, a):                       |        |
+  "         self.bind_them(a, "#000")                      |        |
+  "                                                        |        |
+  "     def bind_them(self, a, c):                         |        |
+  "         print("shadows lie.")      --------------------+        |
+  "                                    -----------------------------+
+  let g:is_pythonsense_suppress_motion_keymaps = 1
 
 " God this plugin is good. Live rendering, cursor syncing
 " Makes previewing my vimkikis hella easy
@@ -140,7 +157,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     \   'links': 0,
     \   'html': 0,
     \   'mouse': 0,
-    \ }  
+    \ }
   let g:vimwiki_global_ext=0 " Prevent creation of temporary wikis so that markdown file are not flagged vimwiki
   " let g:vimwiki_folding='expr'
   let g:vimwiki_folding='custom'
@@ -155,7 +172,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   " ==================
   " HANDLERS FUNCTIONS
   " ==================
-  let g:MY_URLPATTERN ='https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\:\-\?\=\&\~]\+' 
+  let g:MY_URLPATTERN ='https\?://\(www\.\)\?[[:alnum:]\%\/\_\#\.\:\-\?\=\&\~]\+'
   function! s:Link_handler()
     " Overrides the powerfull vimwiki <Enter> mapping to handle zettle-style
     " notes.
@@ -171,15 +188,15 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     let l:match = matchlist(l:word , g:MY_URLPATTERN)
     if len(l:match) > 0
       let l:url = l:match[0]
-      echo "Opening " . l:url 
+      echo "Opening " . l:url
       call system('xdg-open ' . shellescape(l:url).' &')
       return
     endif
     " assets:
-    " video link       [title](assets/name.mp4)
+    " video link       [title](storage/name.mp4)
     " markdown image  ![title](assets/name.{jpg|png|jpeg})
     " pdf              [title](assets/name.pdf})
-    let l:match = matchlist(l:word ,'\!\?[.\+\](\(assets/.\+\))')
+    let l:match = matchlist(l:word ,'\!\?[.\+\](\([assets\|storage\/.\+\))')
     if len(l:match) > 0
       let l:vid = g:MY_VIMWIKIDIR . '/' . l:match[1]
       call system('xdg-open ' . shellescape(l:vid) . ' &')
@@ -188,7 +205,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " markdown link []()
     let l:match = matchlist(l:word ,'\[\([^\]]\+\)\](\([^)]\+\))')
     " let match_link = GetUnderCursor('\[.\+\]([^)]\+)')
-    " If current line contains a link follow it 
+    " If current line contains a link follow it
     if  len(l:match) > 0
       " extract groups -> link_name and file_name
       " matchlist returns [fullmatch, group1, group2,...]
@@ -198,7 +215,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       call vimwiki#base#open_link("e",l:file)
       call s:Insert_header("",l:title)
       return
-    endif 
+    endif
     " None of the above, so create link
     call s:ForwardLink_handler()
   endfunction
@@ -313,7 +330,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
       endif
       let l:img_link = '['.l:vid_title.'](' . l:url . ')'
       " put =l:img_link
-      execute "normal! A" . l:img_link 
+      execute "normal! A" . l:img_link
       return 1
     else
       " echo "No youtube link found in clipboard."
@@ -401,7 +418,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     let l:ext = matchlist(l:url,'\.\([a-z]\+\)$')[1]
     if l:title == ''
       " use extension as title
-      let l:title = l:ext 
+      let l:title = l:ext
     endif
     if len(l:url) > 0
       let l:file = Backup_url(l:url, l:ext)
@@ -417,10 +434,10 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
   let g:stream_patterns = "youtu\\.be\\|www\\.youtube\\.com\\|vimeo\\.com"
   function! Backup_stream(url)
     " Convert youtube URLs to links and backup content
-    " https://youtu.be/rbfFt2uNEyQ?t=5478           -> [video](assets/init_5f4e7.mp4)
-    " https://www.youtube.com/watch?v=Z_MA8CWKxFU   -> [video](assets/init_f5913.mp4)
-    " [test 1](https://youtu.be/rbfFt2uNEyQ?t=5478) -> [test 1](assets/init_f5782.mp4)
-    " [test 2](https://www.youtube.com/watch?v=Z_U) -> [test 2](assets/init_ee172.mp4)
+    " https://youtu.be/rbfFt2uNEyQ?t=5478           -> [video](storage/init_5f4e7.mp4)
+    " https://www.youtube.com/watch?v=Z_MA8CWKxFU   -> [video](storage/init_f5913.mp4)
+    " [test 1](https://youtu.be/rbfFt2uNEyQ?t=5478) -> [test 1](storage/init_f5782.mp4)
+    " [test 2](https://www.youtube.com/watch?v=Z_U) -> [test 2](storage/init_ee172.mp4)
     " https://www.img.com                           -> https://www.img.com
     " check if video actually exists
     let l:vid_title = system("youtube-dl -e " . shellescape(a:url))
@@ -428,14 +445,14 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     if v:shell_error == 0
       let choice = confirm("Backup: " . trim(l:vid_title) . "?","&No\n&Yes")
       if choice == 2
-        let l:temp = shellescape(tempname()) 
+        let l:temp = shellescape(tempname())
         " call YoutubeDownloader(shellescape(l:url), l:path)
-        echo "Downloading " . l:vid_title 
+        echo "Downloading " . l:vid_title
         let l:cmd = "youtube-dl -f 'best[height<=480]' --format mp4 -o " . l:temp . " " . shellescape(a:url)
         echo system(l:cmd)
         let l:md5 = split(system('md5sum ' . l:temp), ' ')[0]
-        let l:link = "assets/" . l:md5 . ".mp4"
-        let l:cmd_mv = 'mv ' . l:temp . " " . g:MY_VIMWIKIDIR . "/" . l:link 
+        let l:link = "storage/" . l:md5 . ".mp4"
+        let l:cmd_mv = 'mv ' . l:temp . " " . g:MY_VIMWIKIDIR . "/" . l:link
         echo "Calculating md5..."
         call system(l:cmd_mv)
         echo "Done."
@@ -444,7 +461,6 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     else
       echo "Video not found."
       return ""
-      " endif
     endif
   endfunction
   let g:user_agent = shellescape("Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36")
@@ -495,7 +511,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
           let line = readfile(l:path, '', 4)[-1]
           let title_parts = matchlist(l:line ,'^title: \(.*\)')
           " title line found
-          if len(l:title_parts) > 1 
+          if len(l:title_parts) > 1
             let title = title_parts[1]
             " title is not empty
             if len(title) > 0
@@ -548,7 +564,7 @@ Plug 'vimwiki/vimwiki', {'branch' : 'dev'}
     " nmap <buffer> <leader>wii :call <SID>Insert_PNG()<CR>
     " vim(W)iki (I)nsert (Y)outube
     " nmap <buffer> <leader>wiy :call Insert_video_link()<CR>
-    " vim(W)iki (B)ackup (Y)outube 
+    " vim(W)iki (B)ackup (Y)outube
     nmap <buffer> <leader>wbl :call Backup_handler()<CR>
     nmap <buffer> <CR> :call <SID>Link_handler()<CR>
     nmap <buffer> <C-Space> <Plug>VimwikiToggleListItem
@@ -582,14 +598,14 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
       \ },
       \ 'colorscheme': 'onedark',
       \ 'active': {
-      \   'left': [ 
+      \   'left': [
       \             [ 'mode', 'paste','readonly','coc_warning','coc_error'],
       \             [ 'cocstatus','mymodified' ],
-      \             [ 'filename' ] 
+      \             [ 'filename' ]
       \           ],
-      \   'right': [ 
+      \   'right': [
       \              [ 'gitbranch','lineinfo' ],
-      \              [ 'fileencoding','filetype','sync']
+      \              [ 'fileencoding','filetype', 'sync' ]
       \            ]
       \ },
       \ 'inactive': {
@@ -605,12 +621,12 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
       \ 'component_expand':{
       \   'mymodified' : 'ModifiedFlag',
       \   'coc_error' : 'LightlineCocErrors',
-      \   'coc_warning' : 'LightlineCocWarnings'
+      \   'coc_warning' : 'LightlineCocWarnings',
       \ },
       \ 'component_type':{
       \   'mymodified' : 'error',
       \   'coc_error' : 'error',
-      \   'coc_warning' : 'warning'
+      \   'coc_warning' : 'warning',
       \ }
       \ }
   " Component expand is called only once every time the statusline is updated
@@ -637,7 +653,7 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
 	function! CocStatusMsg() abort
 	  return winwidth(0) > 100 ? get(g:, 'coc_status', '') : ''
   endfunction
-  let g:coc_user_config = { 
+  let g:coc_user_config = {
     \ 'diagnostic': {
     \   'errorSign': 'E',
     \   'warnignSign': 'W'
@@ -663,7 +679,7 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
   endfunction
   function! SyncFlag()
     "check if the window has the scrollbind flag set
-    return &scb == 0 ? '' : 'Syncd'  
+    return &scb == 0 ? '' : 'Syncd'
   endfunction
   " scb has to be called on all the windows that we want to scrollbind
   function! GitStatus()
@@ -725,11 +741,11 @@ Plug 'junegunn/limelight.vim'
   let g:limelight_conceal_ctermfg = 237
 
 Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
-  nmap <leader>gs :G<CR>
-  " MERGING get from right side (j is on the right)
-  nmap <leader>gj :diffget //3<CR>    
-  " MERGING get from left side (f is on the left)
-  nmap <leader>gf :diffget //2<CR>
+  " nmap <leader>gs :G<CR>
+  " " MERGING get from right side (j is on the right)
+  " nmap <leader>gj :diffget //3<CR>
+  " " MERGING get from left side (f is on the left)
+  " nmap <leader>gf :diffget //2<CR>
   " NOT WORKING
   " function FugitiveBack()
   "   if exists("b:fugitive_type") && b:fugitive_type =~# '^\%(tree\|blob\)$'
@@ -741,7 +757,7 @@ Plug 'tpope/vim-fugitive'        " For git-awareness (used by fzf commands)
   " endfunction
   " autocmd! BufEnter fugitive://* nnoremap <buffer> <BS> :call FugitiveBack()<CR>
 
-" The third component of the holy trinity of plugins 
+" The third component of the holy trinity of plugins
 " (fzf + vimwiki + easymotion)
 Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
 
@@ -753,7 +769,7 @@ Plug 'junegunn/fzf.vim'
   let $FZF_DEFAULT_OPTS.=' --bind ctrl-a:select-all,ctrl-d:deselect-all'
   " CTRL-A CTRL-Q to select all and build quickfix list
   " https://github.com/junegunn/fzf.vim/issues/185#issuecomment-322120216
-  " Note that g:fzf_action only applies to commands that handle plain file paths (i.e used by fzf#wrap() with arguments without explicit sink). 
+  " Note that g:fzf_action only applies to commands that handle plain file paths (i.e used by fzf#wrap() with arguments without explicit sink).
   " In other cases, you'll have to implement your own sink function.
   function! s:build_quickfix_list(lines)
     call setqflist(map(copy(a:lines), '{ "filename": v:val }'))
@@ -805,7 +821,7 @@ Plug 'junegunn/fzf.vim'
     endif
     return path
   endfunction
-  " from https://coreyja.com/vim-spelling-suggestions-fzf/#fnref-1 
+  " from https://coreyja.com/vim-spelling-suggestions-fzf/#fnref-1
   function! FzfSpellSink(word)
     exe 'normal! "_ciw'.a:word
   endfunction
@@ -854,12 +870,12 @@ Plug 'junegunn/fzf.vim'
     let l:lines = copy(a:lines)
     let l:filetype = &filetype
     " Ctrl-l is used to reference notes (l->link)
-    if l:lines[0] == 'ctrl-l' 
+    if l:lines[0] == 'ctrl-l'
       if len(l:lines) > 2 " only insert link if 1 files is selected, no multiselect
         return
       endif
       if l:filetype == "vimwiki"
-        let l:path = split(l:lines[1],":")[0]      
+        let l:path = split(l:lines[1],":")[0]
         let l:name = expand('<cWORD>')
         call s:Insert_link(l:name, l:path)
       endif
@@ -948,7 +964,7 @@ Plug 'junegunn/fzf.vim'
       let l:filename = fnamemodify(l:bufname,":t")
       " if the buffer corresponds to a markdown file add it to the list
       " the filetype check should ensure this, but just to be sure
-      if len(g:buff_hist) == 0 
+      if len(g:buff_hist) == 0
         let g:buff_hist = [l:filename]
       elseif l:filename != g:buff_hist[0]
         " avoid adding duplicate entries by leaving/re-entering the same buff
@@ -969,7 +985,7 @@ Plug 'junegunn/fzf.vim'
       let l:files_list = join(g:buff_hist[1:])
     endif
     return l:files_list
-  endfunction 
+  endfunction
   " ================
   " SEARCH FUNCTIONS
   " ================
@@ -988,13 +1004,13 @@ Plug 'junegunn/fzf.vim'
       let initial_command = printf(command_fmt, shellescape(a:query), a:files)
       let reload_command = printf(command_fmt, '{q}', a:files)
       let path = GitAwarePath()
-      " options = 
+      " options =
       " sink*: function to handle the selected files
       " bind : restart rg search when the typed string changes
       " phony: turns off searching with fzf and lets rg do all the work (o.w.
       " fzf would search in the strings returned by rg)
       " ansi : shows the colored output of rg (--color=always) as actual colors
-      let spec = { 
+      let spec = {
                \ 'source' : initial_command,
                \ 'sink*' : function(a:sink),
                \ 'options':[ '--bind', 'change:reload:' . reload_command,
@@ -1029,14 +1045,14 @@ Plug 'junegunn/fzf.vim'
   " ============
   " EXACT SEARCHES
   " These commands use fzf with -phony so all the work is done by ripgrep
-  command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0, "Rg_handler") 
-  command! -nargs=* -bang Cite call PapersFZF(<q-args>, <bang>0, "Cite_handler") 
-  command! -nargs=* -bang MyRg call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", "") 
-  command! -nargs=* -bang Qf call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", Qfix_selector()) 
+  command! -nargs=* -bang Papers call PapersFZF(<q-args>, <bang>0, "Rg_handler")
+  command! -nargs=* -bang Cite call PapersFZF(<q-args>, <bang>0, "Cite_handler")
+  command! -nargs=* -bang MyRg call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", "")
+  command! -nargs=* -bang Qf call RipgrepFZF(<q-args>, <bang>0, "Rg_handler", Qfix_selector())
   command! -nargs=* -bang Incoming call RipgrepFZF("^title: ", 0, "Rg_handler", Incoming_selector())
   command! -nargs=* -bang Outgoing call RipgrepFZF("^title: ", 0, "Rg_handler", Outgoing_selector())
   command! -nargs=* -bang History call RipgrepFZF("^title: ", 0, "Rg_handler", BufHist_selector())
-  " FUZZY SEARCHES 
+  " FUZZY SEARCHES
   " Other commands use fzf with -phony so all the work is done by ripgrep
   " These commands instead use fzf to fuzzy search in ripgrep's results
   command! -nargs=* -bang Tags
@@ -1047,7 +1063,7 @@ Plug 'junegunn/fzf.vim'
   command! -nargs=* -bang FZFrg
   \ call fzf#vim#grep(
   \   'rg --column --line-number --no-heading --sortr=modified --color=always --smart-case -- '.shellescape(<q-args>), 1,
-  \   fzf#vim#with_preview({'dir' : GitAwarePath()}), <bang>0)  
+  \   fzf#vim#with_preview({'dir' : GitAwarePath()}), <bang>0)
   " ============
   " FZF MAPPINGS
   " ============
@@ -1055,7 +1071,7 @@ Plug 'junegunn/fzf.vim'
   nnoremap <leader>ff :Files<CR>
   nnoremap <leader>fb :Buffers<CR>
   nnoremap <leader>fl :Lines<CR>
-  " Crazy mnemonics here. 
+  " Crazy mnemonics here.
   " frg -> (F)ZF (R)ip(G)rep
   " frf -> (F)ZF (R)ipGrep (F)uzzy
   " frw -> (F)ZF (R)ipGrep current (W)ord
@@ -1112,10 +1128,10 @@ Plug 'mbbill/undotree'           " More easily navigate vim's poweful undo tree
   endif
   let g:undotree_SetFocusWhenToggle = 1
 
-Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
-  " Color customizations are at the end of the file
-  " hi CurrentWord ctermbg=236
-  " hi CurrentWordTwins ctermbg=237
+" Plug 'dominikduda/vim_current_word' " highlight current word and other occurrences
+"   " Color customizations are at the end of the file
+"   " hi CurrentWord ctermbg=236
+"   " hi CurrentWordTwins ctermbg=237
 
 Plug 'tpope/vim-surround'            " cs surrounding capabilities eg. cs)], csw'
 
@@ -1151,7 +1167,7 @@ set nu                                 " Set both types of NUmbering to get hybr
 set rnu
 set title                              " Set the terminal title
 set ruler                              " Display the cursor position
-" set cursorline                         " Highlight current line to find the cursor more easily
+set cursorline                         " Highlight current line to find the cursor more easily
 " set cursorcolumn                       " Highlight current column to find the cursor more easily
 set laststatus=2                       " Always display the status line, even if only one window is displayed
 set cmdheight=2                        " Set the command window height to 2 lines to avoid press <Enter> to continue"
@@ -1171,7 +1187,7 @@ set autoread                           " Reload files changed outside vim
 set lazyredraw                         " Don't redraw while executing macros (good performance setting)
 set linebreak                          " Stop annoying 80 chars line wrapping
 set scrolloff=4                        " Leave some space above and below the cursor while scrolling
-set signcolumn=yes                     " Show the gutter for git info, errors... 
+set signcolumn=yes                     " Show the gutter for git info, errors...
 set foldlevel=99                       " Unfold folds by default, don't use nofoldenable, for some reason the foldlevel gets messed up
 " Foldlevel=99 means I have to zr 98 times before folding a second level fold
 " with the following autocmd I set the foldlevel value to the max fold level
@@ -1199,9 +1215,9 @@ function! MarkdownLevel()
     if getline(v:lnum) =~ '^###### .*$'
         return ">6"
     endif
-    return "=" 
+    return "="
 endfunction
-autocmd BufReadPost *.md setlocal foldexpr=MarkdownLevel()  
+autocmd BufReadPost *.md setlocal foldexpr=MarkdownLevel()
 autocmd BufReadPost *.md setlocal foldmethod=expr
 autocmd BufReadPost *.md let &foldlevel = FindFoldLevel()
 
@@ -1276,7 +1292,7 @@ function! AllMatches(text,pattern)
   let safety = 0
   let [matched,startpos,endpos] = matchstrpos(a:text,a:pattern,cursor)
   while matched != ""
-    call add(matches, matched) 
+    call add(matches, matched)
     let cursor = endpos
     let [matched,startpos,endpos] = matchstrpos(a:text,a:pattern,cursor)
     let safety += 1
@@ -1365,16 +1381,26 @@ command! Bonly execute '%bdelete|edit #|normal `"'
 " http://vimcasts.org/episodes/project-wide-find-and-replace/
 command! -nargs=0 -bar Qargs execute 'args ' . s:QuickfixNames()
 
-" Available in tpope/vim-unimpaired's ]e/[e
 " function! s:QuickGetLine(off)
+"   " easily move lines to line below cursor
+"   echoerr "BUGGED"
+"   return
+"   let matches = matchlist(a:off,'\([0-9]\+\)\([jk]\)')
 "   redraw
-"   let l:start = line('.')
-"   " Get the line with offset a:off (works for negative values)
-"   let l:line = getline(l:start + str2nr(a:off))
-"   " Insert that line below the cursor
-"   put =l:line
+"   if len(matches) > 0
+"     let nlines = str2nr(matches[1])
+"     let dir = matches[2]
+"     if dir == 'k' " k means get from above
+"      let nlines = -nlines
+"     endif
+"     let l:start = line('.')
+"     let l:line = getline(l:start + l:nlines)
+"     " Insert that line below the cursor
+"     put =l:line
+"   endif
 " endfunction
-" nnoremap <leader>g :call <SID>QuickGetLine(input('Line to copy: '))<CR>
+" nnoremap <leader>r :call <SID>QuickGetLine(input(''))<CR>
+
 
 " ======================
 " FREQUENTLY USED LEADER
@@ -1403,7 +1429,7 @@ xnoremap <leader>p "_dP
 " nnoremap <leader>cd :cd %:p:h<cr>:pwd<cr>
 " Take quick notes, with = so that is close to buffer close
 function! s:ToggleScratchpad()
-  let l:file = expand("%:t") 
+  let l:file = expand("%:t")
   if l:file ==? "buffer.md"
     bd
   else
@@ -1425,7 +1451,7 @@ nnoremap <leader><leader>d :execute "normal! i" . strftime('%Y-%m-%d')<CR>
 " nnoremap <leader>ex !!bash<CR>
 nnoremap <leader><leader>e !!bash<CR>
 " alternate between current file and alternate file
-nnoremap <leader><leader>a <C-^> 
+nnoremap <leader><leader>a <C-^>
 " Dictionary (l)ookup
 " nnoremap <leader>l :execute "!xdg-open https://www.merriam-webster.com/dictionary/" . expand('<cword>')<CR>
 nnoremap <leader><leader>l :execute "!xdg-open \"https://www.dictionary.com/browse/" . expand('<cword>') . "?s=t\""<CR>
@@ -1460,10 +1486,16 @@ augroup END
 " cmap w!! w !sudo tee %
 
 " Easier split navigation
-nnoremap <C-J> <C-W><C-J>
-nnoremap <C-K> <C-W><C-K>
-nnoremap <C-L> <C-W><C-L>
-nnoremap <C-H> <C-W><C-H>
+nnoremap <leader>j <C-W><C-J>
+nnoremap <leader>k <C-W><C-K>
+nnoremap <leader>l <C-W><C-L>
+nnoremap <leader>h <C-W><C-H>
+
+" Use capital letters to create splits
+nnoremap <leader>J :rightbelow sp<CR>
+nnoremap <leader>K :aboveleft sp<CR>
+nnoremap <leader>H :leftabove vsp<CR>
+nnoremap <leader>L :rightbelow vsp<CR>
 
 " Better navigation of long lines, when wrapping and pressing up/down
 " you might want to that part of the line, not the line above
@@ -1484,18 +1516,20 @@ nmap Q <Nop>
 " Remap VIM 0 to first non-blank character
 map 0 ^
 
-" Hopefully more intuitive folding navigation 
+" Hopefully more intuitive folding navigation
 " WARNING: OVERRIDES f (find) mapping, but I never use it on its own e.g. fl vs dfl
 " When looking at a closed fold down (j) opens it, like pulling down a menu
-nnoremap fj zr
-" h is like a stronger j, so it pulls down all the folds, i.e. open all 
-nnoremap fh zR
-" opposite for up (k) / l  
-nnoremap fl zM
-nnoremap fk zm
-" Open close individual folds
-nnoremap fi zc
-nnoremap fo zo
+nnoremap fj zo
+" Similarly (k) pushes it back up -> closed
+nnoremap fk zc
+" Since j/k open close individual folds, left/right i.e. h/l toggle all folds
+" at once
+nnoremap fl zR
+nnoremap fh zM
+" I still want to increase/decrease all levels by 1, so I'll use o as in open
+" and i as in... being next to it ;P
+nnoremap fo zr
+nnoremap fi zm
 
 " }}}
 " ============================================================================
@@ -1597,28 +1631,6 @@ set background=dark " Because dark is cool
 "               \ 'R': '#!/usr/bin/env Rscript'
 "               \}
 
-" " Very well made python aware plugin, I'm using it for semantig highlight
-" Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
-"   function MyCustomSemshiHighlights()
-"       hi semshiGlobal          ctermfg=red
-"       hi semshiLocal           ctermfg=209
-"       hi semshiGlobal          ctermfg=214
-"       hi semshiImported        ctermfg=180
-"       hi semshiParameter       ctermfg=75
-"       hi semshiParameterUnused ctermfg=117  cterm=underline
-"       hi semshiFree            ctermfg=218
-"       hi semshiBuiltin         ctermfg=207
-"       hi semshiAttribute       ctermfg=49
-"       hi semshiSelf            ctermfg=249
-"       hi semshiUnresolved      ctermfg=226  cterm=underline
-"       " hi semshiSelected        ctermfg=231  ctermbg=161
-"       hi semshiSelected        ctermfg=161  cterm=underline
-"       hi semshiErrorSign       ctermfg=231  ctermbg=160
-"       hi semshiErrorChar       ctermfg=231  ctermbg=160
-"       sign define semshiError text=E> texthl=semshiErrorSign
-"   endfunction
-"   autocmd FileType python call MyCustomSemshiHighlights()
-"   autocmd ColorScheme * call MyCustomSemshiHighlights()
 
 " Plug 'tmhedberg/SimpylFold'          " Better Python folding
 "   let g:SimpylFold_docstring_preview=1
@@ -1669,6 +1681,84 @@ set background=dark " Because dark is cool
 "   let g:UltiSnipsJumpBackwardTrigger="<Up>"
 "   let g:UltiSnipsSnippetDirectories=[$HOME.'/dotfiles/neovim/UltiSnips']
 
+" Plug 'ndmitchell/ghcid', { 'rtp': 'plugins/nvim' }
+" Plug 'neovimhaskell/haskell-vim'
+" Plug 'tpope/vim-obsession'
+
+" Plug 'dense-analysis/ale'
+"   " " Equivalent to the above.
+"   let g:ale_linters = {'python': ['flake8']}
+"   let g:ale_fixers = {
+"   \   '*': ['remove_trailing_lines', 'trim_whitespace'],
+"   \   'javascript': ['prettier'],
+"   \   'python': ['black','isort']
+"   \}
+"   let g:LINT_FIX_ENV = '/home/lapo/miniconda3/envs/deep/bin/'
+"   let g:ale_python_black_executable = g:LINT_FIX_ENV . 'black'
+"   let g:ale_python_isort_executable = g:LINT_FIX_ENV . 'isort'
+"   let g:ale_python_flake8_executable = g:LINT_FIX_ENV . 'flake8'
+"   let g:ale_python_flake8_options = "--ignore=F632,E501,W503,E203,E731"
+"   let g:ale_set_loclist = 0
+"   let g:ale_set_quickfix = 1
+"   let g:ale_lint_on_text_changed = 0
+"   let g:ale_lint_on_save = 0
+"   let g:ale_lint_on_insert_leave = 0
+"   let g:ale_lint_on_enter = 0
+"   let g:ale_fix_on_save = 0
+
+" Plug 'maximbaz/lightline-ale'
+
+" I keep adding, removing, tweaking this motherfucker but I cannot get it to
+" work smoothly >_> The python language server is slow af sometimes and I have
+" to wait multiple seconds for it to finish checking in the background before
+" I can use things like go to def.
+" Plug 'neoclide/coc.nvim', {'branch': 'release'}
+"   " TextEdit might fail if hidden is not set.
+"   " set hidden
+"   " Some servers have issues with backup files, see #649.
+"   set nobackup
+"   set nowritebackup
+"   " Give more space for displaying messages.
+"   " set cmdheight=2
+"   " Having longer updatetime (default is 4000 ms = 4 s) leads to noticeable
+"   " delays and poor user experience.
+"   set updatetime=300
+"   " Don't pass messages to |ins-completion-menu|.
+"   set shortmess+=c
+"   " Always show the signcolumn, otherwise it would shift the text each time
+"   " diagnostics appear/become resolved.
+"   " set signcolumn=yes
+"   function! s:check_back_space() abort
+"     let col = col('.') - 1
+"     return !col || getline('.')[col - 1]  =~# '\s'
+"   endfunction
+"   " Use K to show documentation in preview window.
+"   function! s:show_documentation()
+"     if (index(['vim','help'], &filetype) >= 0)
+"       execute 'h ' . expand('<cword>')
+"     else
+"       call CocAction('doHover')
+"     endif
+"   endfunction
+"   fun! GoCoc()
+"     " Use tab for trigger completion with characters ahead and navigate.
+"     " NOTE: Use command ':verbose imap <tab>' to make sure tab is not mapped by
+"     " other plugin before putting this into your config.
+"     inoremap <buffer> <silent><expr> <TAB>
+"           \ pumvisible() ? "\<C-n>" :
+"           \ <SID>check_back_space() ? "\<TAB>" :
+"           \ coc#refresh()
+"     inoremap <buffer> <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+"     nmap <buffer> <silent> gd <Plug>(coc-definition)
+"     nmap <buffer> <silent> gr <Plug>(coc-references)
+"     nmap <buffer> <silent> <leader>rn <Plug>(coc-rename)
+"     nnoremap <buffer> <silent> K :call <SID>show_documentation()<CR>
+"     nnoremap <buffer> <silent> <leader>coc  :<C-u>CocList<CR>
+"   endfun
+"   augroup cocbindings
+"     autocmd! cocbindings
+"     autocmd Filetype python,json,vim,javascript :call GoCoc()
+"   augroup end
 
 " }}}
 " ============================================================================
