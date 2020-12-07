@@ -11,6 +11,7 @@ alias untarbz2="tar -xvjf"
 alias tarlist="tar -tvf"
 alias targzlist="tar -ztvf"
 alias tarbz2list="tar -jtvf"
+alias sizes="du -h --max-depth=1 | sort --human-numeric-sort"
 
 cd_with_fzf(){
   cd $HOME && cd "$(fd -t d | fzf --preview="tree -L 1 {}" --bind="space:toggle-preview" --preview-window=:hidden)"
@@ -156,4 +157,15 @@ yt2txt(){
   vtt2txt $VTT
   rm $VTT
   rm $TMP
+}
+
+bright(){
+  if (( $1 <= 1.0 )) && (( $1 > 0.1 )) ; then
+    echo "Brightness level set to $1"
+    for DEVICE in $(xrandr --prop | grep " connected" | awk '{ print $1 }'); do
+      xrandr --output $DEVICE --brightness $1
+    done
+  else
+    echo "Brightness level b must satisfy: 0 < b <= 1 ( $1 )"
+  fi
 }

@@ -244,7 +244,7 @@ bindsym $mod+r mode "resize"
 #         status_command i3blocks
 # }
 
-# focus_follows_mouse no
+focus_follows_mouse no
 
 ##############################################################
 # MY BINDINGS ################################################
