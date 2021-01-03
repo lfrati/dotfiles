@@ -1,6 +1,5 @@
 # alias rm='echo "This is not the command you are looking for."; false'
-alias vim='nvim'
-alias vi='nvim'
+alias vim='nvim -u ~/dotfiles/neovim/lean.vim'
 alias open='xdg-open'
 alias getsong="youtube-dl -x --output '%(title)s.%(ext)s' --audio-format mp3 -f bestaudio --add-metadata --no-playlist "
 alias mkreport="~/miniconda3/envs/deep/bin/jupyter nbconvert --template=/home/lapo/dotfiles/report.tpl --to=html "
@@ -12,30 +11,81 @@ alias tarlist="tar -tvf"
 alias targzlist="tar -ztvf"
 alias tarbz2list="tar -jtvf"
 alias sizes="du -h --max-depth=1 | sort --human-numeric-sort"
+alias rcd="source ranger"
 
-cd_with_fzf(){
-  cd $HOME && cd "$(fd -t d | fzf --preview="tree -L 1 {}" --bind="space:toggle-preview" --preview-window=:hidden)"
+pymux(){
+  # Interactive editing of python files in tmux + ipython split
+
+  if [ "$#" -ne 1 ]; then
+    echo "Select 1 target file."
+    return
+  fi
+
+  if [[ "$CONDA_PREFIX" != *"/envs/"* ]]; then
+    echo "Activate a conda environment with ipython first."
+    return
+  fi
+
+  CONDA_ENV=$(basename $CONDA_PREFIX)
+  echo "Conda env: $CONDA_ENV"
+  echo "Editing $1"
+
+  # Am I in tmux already?
+  if ! { [ "$TERM" = "screen" ] && [ -n "$TMUX" ]; } then
+    # No, then create new session 
+    tmux new -d -x $(tput cols) -y $(tput lines)
+    # get session name to attach to it later
+    SESSION=$(tmux display-message -p "#S")
+    echo "Creating session $SESSION"
+    # start conda in the new session
+    tmux send-keys 'conda activate ' $CONDA_ENV C-m
+  fi
+
+  tmux split-window -h -p 30
+  tmux send-keys 'conda activate ' $CONDA_ENV C-m
+  tmux send-keys 'clear' C-m
+  tmux send-keys 'ipython' C-m
+  tmux send-keys '%load_ext autoreload' Enter
+  tmux send-keys '%autoreload 2' Enter
+
+  # start with focus on vim
+  tmux select-pane -L
+  tmux send-keys 'nvim ' $1 C-m
+
+  if [ "$SESSION" != "" ]; then
+    tmux attach-session -t $SESSION
+  fi
 }
-bindkey -s '^p' 'cd_with_fzf\n'
 
-# Use lf to switch directories
-lfcd () {
-    tmp="$(mktemp)"
-    lf -last-dir-path="$tmp" "$@"
-    if [ -f "$tmp" ]; then
-        dir="$(cat "$tmp")"
-        rm -f "$tmp"
-        [ -d "$dir" ] && [ "$dir" != "$(pwd)" ] && cd "$dir"
-    fi
+ipysplit(){
+
+  if [[ "$TMUX" == "" ]]; then
+    echo "Must be run inside Tmux."
+    return
+  fi
+
+  if [[ "$CONDA_PREFIX" != *"/envs/"* ]]; then
+    echo "Activate a conda environment with ipython first."
+    return
+  fi
+  CONDA_ENV=$(basename $CONDA_PREFIX)
+  tmux split-window -h -p 30
+  tmux send-keys 'conda activate ' $CONDA_ENV C-m
+  tmux send-keys 'clear' C-m
+  tmux send-keys 'ipython' C-m
+  tmux send-keys '%load_ext autoreload' Enter
+  tmux send-keys '%autoreload 2' Enter
+
+
 }
-# export OPENER="rifle"
-# Using ranger instead
-bindkey -s '^l' 'lfcd\n'
-bindkey -s '^o' 'ranger\n'
 
-# Edit line in vim with ctrl-e:
-autoload edit-command-line; zle -N edit-command-line
-bindkey '^e' edit-command-line
+pyentr(){
+  if [[ "$CONDA_PREFIX" != *"/envs/"* ]]; then
+    echo "Activate a conda environment first."
+    return
+  fi
+  echo $1 | entr -c python /_
+}
 
 prettyjson(){
   cat $1 | python -mjson.tool > pretty-$1
@@ -115,7 +165,6 @@ papers() {
   cd $ORIGIN
 }
 
-
 waconfig(){
   # Set up my old wacom bamboo touch, turning off touch and mapping it to the left screen
   touchID=$(xsetwacom list devices | grep TOUCH | sed 's/.*id: \([0-9]*\).*/\1/')
@@ -169,3 +218,9 @@ bright(){
     echo "Brightness level b must satisfy: 0 < b <= 1 ( $1 )"
   fi
 }
+
+bindkey -r "^[x"
+bindkey -s '^o' 'ranger\n'
+# Edit line in vim with ctrl-e:
+autoload edit-command-line; zle -N edit-command-line
+bindkey '^e' edit-command-line

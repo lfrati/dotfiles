@@ -21,17 +21,17 @@ if [ $? != 0 ]; then
 
   # Pane 1
   # create a new tmux session
-  tmux new-session -d -s $session
+  tmux new-session -d -s $session -x $(tput cols) -y $(tput lines)
 
   # Pane 2
   # Split pane 1 horizontally to make room for GPU/CPU info
-  tmux splitw -h -p 32
+  tmux splitw -h -p 34
+
+  # Pane 3
+  # Make thin bottom pane for music
+  tmux splitw -f -v -p 30
 
   # Pane 4
-  # Make thin bottom pane for music
-  tmux splitw -f -v -p 5
-
-  # Pane 5
   tmux splitw -h
 
   # Assign tasks to each pane
@@ -43,6 +43,9 @@ if [ $? != 0 ]; then
 
   tmux selectp -t 3
   tmux send-keys "ncmpcpp" C-m
+
+  tmux selectp -t 4
+  tmux send-keys "vit" C-m
 
 
 fi
