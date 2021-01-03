@@ -13,7 +13,7 @@ set $mod Mod1
 set $super Mod4
 
 # Remove window title, TODO: do I want this?
-new_window pixel 1
+new_window pixel 2
 
 # 4.29. Focus on window activation
 # If a window is activated, e.g., via google-chrome www.google.com, it may request to take focus. Since this may not preferable, different reactions can be configured.
@@ -66,7 +66,7 @@ floating_modifier $mod
 # bindsym $mod+Return exec i3-sensible-terminal
 # bindsym $mod+Return exec gnome-terminal
 # bindsym $mod+Return exec urxvt 
-bindsym $mod+Return exec alacritty
+bindsym $mod+Return exec --no-startup-id alacritty
 
 # i3-sensible-terminal checks the following terminals in this order:
 #
@@ -201,6 +201,13 @@ bindsym $mod+Shift+8 move container to workspace number $ws8
 bindsym $mod+Shift+9 move container to workspace number $ws9
 bindsym $mod+Shift+0 move container to workspace number $ws10
 
+# open matplotlib windows as floating https://major.io/2019/02/08/automatic-floating-windows-in-i3/
+# use the script i3_window_info.sh to title/class
+for_window [title="Figure 1"] floating enable
+for_window [class="Surf"] floating enable
+for_window [class="Surf"] resize set 1280 960
+for_window [class="Surf"] move position center
+
 # reload the configuration file
 bindsym $mod+Shift+c reload
 # restart i3 inplace (preserves your layout/session, can be used to upgrade i3)
@@ -208,32 +215,31 @@ bindsym $mod+Shift+r restart
 # exit i3 (logs you out of your X session)
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
 
-# resize window (you can also use the mouse for that)
-mode "resize" {
-        # These bindings trigger as soon as you enter the resize mode
+# # resize window (you can also use the mouse for that)
+# mode "resize" {
+#         # These bindings trigger as soon as you enter the resize mode
 
-        # Pressing left will shrink the window’s width.
-        # Pressing right will grow the window’s width.
-        # Pressing up will shrink the window’s height.
-        # Pressing down will grow the window’s height.
-        bindsym j resize shrink height 10 px or 10 ppt
-        bindsym k resize grow height 10 px or 10 ppt
-        bindsym l resize grow width 10 px or 10 ppt
-        bindsym h resize shrink width 10 px or 10 ppt
+#         # Pressing left will shrink the window’s width.
+#         # Pressing right will grow the window’s width.
+#         # Pressing up will shrink the window’s height.
+#         # Pressing down will grow the window’s height.
+#         bindsym j resize shrink height 10 px or 10 ppt
+#         bindsym k resize grow height 10 px or 10 ppt
+#         bindsym l resize grow width 10 px or 10 ppt
+#         bindsym h resize shrink width 10 px or 10 ppt
 
-        # same bindings, but for the arrow keys
-        bindsym Left resize shrink width 10 px or 10 ppt
-        bindsym Down resize grow height 10 px or 10 ppt
-        bindsym Up resize shrink height 10 px or 10 ppt
-        bindsym Right resize grow width 10 px or 10 ppt
+#         # same bindings, but for the arrow keys
+#         bindsym Left resize shrink width 10 px or 10 ppt
+#         bindsym Down resize grow height 10 px or 10 ppt
+#         bindsym Up resize shrink height 10 px or 10 ppt
+#         bindsym Right resize grow width 10 px or 10 ppt
 
-        # back to normal: Enter or Escape or $mod+r
-        bindsym Return mode "default"
-        bindsym Escape mode "default"
-        bindsym $mod+r mode "default"
-}
-
-bindsym $mod+r mode "resize"
+#         # back to normal: Enter or Escape or $mod+r
+#         bindsym Return mode "default"
+#         bindsym Escape mode "default"
+#         bindsym $mod+r mode "default"
+# }
+# bindsym $mod+r mode "resize"
 
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
@@ -270,10 +276,17 @@ bindsym Print exec flameshot gui
 # Shortcut to easily open folders
 bindsym $mod+t exec thunar 
 
+set $tmux exec --no-startup-id "tmux has-session -t default && alacritty -e tmux attach -t default || alacritty -e bash ~/dotfiles/tmux/default.sh "
+bindsym $mod+i $tmux
+
 # Good night screen
 bindsym Pause exec "sleep 1 ; xset dpms force off"
 
 bindsym $mod+Tab workspace back_and_forth
+
+# bindsym $mod+g exec firefox --new-tab 'https://www.google.com' 
+bindsym $mod+g exec surf 'https://www.google.com' 
+
 ##############################################################
 # MY STARTUP  ################################################
 ##############################################################
@@ -297,6 +310,4 @@ exec --no-startup-id xcompmgr -c -l0 -t0 -r0 -o.00 # fix zoom black screen annot
 
 # opening multiple applications is a mess because if the take some time to load the focus get thrown all over
 # the place and nothing ends up where I want it.
-exec --no-startup-id i3-msg 'workspace 10; exec alacritty --hold -e sh /home/lapo/dotfiles/dashboard.sh'
-
-
+exec --no-startup-id i3-msg 'workspace 10; exec --no-startup-id alacritty -e sh /home/lapo/dotfiles/tmux/dashboard.sh'
