@@ -144,6 +144,8 @@ export PATH="$PATH:$(yarn global bin)"
 
 export PYTHONPATH="$PYTHONPATH:."
 
+export JULIA_LOAD_PATH=".:$JULIA_LOAD_PATH"
+
 # Until TensorFlow supports Cuda 10.1 I'm renaming 10.1 -> 10.0 and add it to the path
 export LD_LIBRARY_PATH=/usr/local/cuda10:$LD_LIBRARY_PATH
 

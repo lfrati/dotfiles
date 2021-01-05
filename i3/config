@@ -203,8 +203,10 @@ bindsym $mod+Shift+0 move container to workspace number $ws10
 
 # open matplotlib windows as floating https://major.io/2019/02/08/automatic-floating-windows-in-i3/
 # use the script i3_window_info.sh to title/class
-for_window [title="Figure 1"] floating enable
-for_window [class="Surf"] floating enable
+for_window [title="Figure 1"] floating enable # Make matplotlib plots float, for when I use the terminal
+for_window [class="Makie"] floating enable # Make Makie.jl plots float, for when I use the terminal
+for_window [class="Makie"] move position center
+for_window [class="Surf"] floating enable # Used mainly for quickly googling something
 for_window [class="Surf"] resize set 1280 960
 for_window [class="Surf"] move position center
 

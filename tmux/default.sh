@@ -1,6 +1,6 @@
 # Use -d to allow the rest of the function to run
 tmux new-session -d -s default
-tmux send-keys 'nvim ~/Dropbox/vimwiki/index.md' C-m
+tmux send-keys 'nvim -u ~/dotfiles/neovim/full.vim ~/Dropbox/vimwiki/index.md' C-m
 tmux rename-window zettle
 # -d to prevent current window from changing
 tmux new-window -d
