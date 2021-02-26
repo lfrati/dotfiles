@@ -1,0 +1,55 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{fullpage}
+\usepackage[top=2cm, bottom=4.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{lastpage}
+\usepackage{enumitem}
+\usepackage[ruled, vlined]{algorithm2e}
+\usepackage{fancyhdr}
+\usepackage{mathrsfs}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{shapes,backgrounds}
+\usepackage[utf8]{inputenc}
+\usepackage{csquotes}
+
+\bibliographystyle{plain}
+
+% Edit these as appropriate
+\newcommand\course{Reinforcement Learning}
+\newcommand\NetID{lfrati@uvm.edu}
+\newcommand\Author{Lapo Frati}
+\pagestyle{fancyplain}
+\headheight 35pt
+\lhead{\NetID\\\Author}
+% \chead{\textbf{\Large Assignment \chapternumber }}
+\rhead{\course \\ \today}
+\lfoot{}
+\cfoot{}
+\rfoot{\small\thepage}
+\headsep 1.5em
+
+\setlength{\parskip}{\baselineskip}%
+\setlength{\parindent}{0pt}%
+
+\newenvironment{list_abc}
+{ \begin{enumerate}[label=(\alph*)] }
+{ \end{enumerate} }
+
+\newenvironment{list_iv}
+{ \begin{enumerate}[label=\roman*.] }
+{ \end{enumerate} }
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+}

@@ -531,7 +531,7 @@ function! Cite_handler(lines)
   " handles multiple lines as :
   " [bibID](<path>),[bibID](<path>),[bibID](<path>)...
   " note: skip the first element of a:lines because we ignore ctrl-l
-  if a:lines[0] == 'ctrl-l'
+  if a:lines[0] == 'ctrl-i'
     echo a:lines
     return
   endif
@@ -552,7 +552,7 @@ function! Rg_handler(lines)
   let l:lines = copy(a:lines)
   let l:filetype = &filetype
   " Ctrl-l is used to reference notes (l->link)
-  if l:lines[0] == 'ctrl-l'
+  if l:lines[0] == 'ctrl-i'
     if len(l:lines) > 2 " only insert link if 1 files is selected, no multiselect
       return
     endif
@@ -696,7 +696,7 @@ function! RipgrepFZF(query, fullscreen, sink, files)
              \ 'source' : initial_command,
              \ 'sink*' : function(a:sink),
              \ 'options':[ '--bind', 'change:reload:' . reload_command,
-                         \ '--expect=ctrl-l',
+                         \ '--expect=ctrl-i',
                          \ '--phony',
                          \ '--ansi',
                          \ '--multi'],
@@ -714,7 +714,7 @@ function! PapersFZF(query, fullscreen, sink)
            \ 'source' : initial_command,
            \ 'sink*': function(a:sink),
            \ 'options':[ '--bind', 'change:reload:'.reload_command,
-                       \ '--expect=ctrl-l',
+                       \ '--expect=ctrl-i',
                        \ '--phony',
                        \ '--ansi',
                        \ '--multi'],

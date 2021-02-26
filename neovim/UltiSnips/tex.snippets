@@ -1,0 +1,94 @@
+global !p
+def math():
+	return vim.eval('vimtex#syntax#in_mathzone()') == '1'
+def comment(): 
+	return vim.eval('vimtex#syntax#in_comment()') == '1'
+def env(name):
+	[x,y] = vim.eval("vimtex#env#is_inside('" + name + "')") 
+	return x != '0' and y != '0'
+endglobal
+
+
+snippet template "Basic template" b
+\documentclass[12pt,a4paper]{article}
+\usepackage[top=2cm, bottom=4.5cm, left=2.5cm, right=2.5cm]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{textcomp}
+\usepackage{amsmath,amsthm,amsfonts,amssymb,amscd}
+\usepackage{fullpage}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{subcaption}
+\usepackage{float}
+
+% figure support
+\usepackage{import}
+\usepackage{xifthen}
+\pdfminorversion=7
+\usepackage{pdfpages}
+\usepackage{transparent}
+\newcommand{\incfig}[1]{%
+	\def\svgwidth{\columnwidth}
+	\import{./figures/}{#1.pdf_tex}
+}
+\pdfsuppresswarningpagegroup=1
+
+\usepackage{hyperref}
+\hypersetup{breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+
+\bibliographystyle{plain}
+
+\begin{document}
+	$0
+
+\bibliography{References}
+\end{document}
+endsnippet
+
+snippet "^tab" "Table environment" rA
+\begin{table}[${1:htpb}]
+	\centering
+	\caption{${2:caption}}
+	\label{tab:${3:label}}
+	\begin{tabular}{${5:c}}
+	$0${5/((?<=.)c|l|r)|./(?1: & )/g}
+	\end{tabular}
+\end{table}
+endsnippet
+
+snippet "^fig" "Figure environment" rA
+\begin{figure}[${1:htpb}]
+	\centering
+	${2:\includegraphics[width=0.8\textwidth]{$0}}
+	\caption{}
+	\label{fig:$3}
+\end{figure}
+endsnippet
+
+snippet "^sec" "Section" rA
+\section$0{$1}
+${2:\label{sec:${1/\W+//g}}}
+endsnippet
+
+snippet "^sub" "Subsection" rA
+\subsection$0{$1}
+\label{subsec:$1}
+endsnippet
+
+snippet "^enum" "Enumerate" rA
+\begin{enumerate}
+	\item $0
+\end{enumerate}
+endsnippet
+
+snippet "^item" "Itemize" rA
+\begin{itemize}
+	\item $0
+\end{itemize}
+endsnippet
+
+snippet "^pac" "Package" rA
+\usepackage[${1:options}]{${2:package}}$0
+endsnippet

@@ -39,11 +39,62 @@ syntax on
 
 call plug#begin('~/.vim/plugged')
 
+Plug 'jiangmiao/auto-pairs'
+
+Plug 'lervag/vimtex', {'for' : 'tex'}
+  " let g:vimtex_view_general_viewer = 'zathura'
+  " let g:vimtex_view_general_options
+  "     \ = '-reuse-instance -forward-search @tex @line @pdf'
+  " let g:vimtex_view_general_options_latexmk = '-reuse-instance'
+  let g:vimtex_view_general_viewer = 'okular'
+  let g:vimtex_view_general_options = '--unique file:@pdf\#src:@line@tex'
+  let g:vimtex_view_general_options_latexmk = '--unique' 
+  let g:tex_flavor='latex'
+  " TOC settings
+  let g:vimtex_toc_config = {
+        \ 'name' : 'TOC',
+        \ 'layers' : ['content', 'todo', 'include'],
+        \ 'resize' : 1,
+        \ 'split_width' : 50,
+        \ 'todo_sorted' : 0,
+        \ 'show_help' : 1,
+        \ 'show_numbers' : 1,
+        \ 'mode' : 2,
+        \}
+  let g:vimtex_syntax_conceal = {
+      \ 'accents':0,
+      \ 'fancy':0,
+      \ 'greek':1,
+      \ 'math_bounds':1,
+      \ 'math_delimiters':1,
+      \ 'math_fracs':1,
+      \ 'math_super_sub':1,
+      \ 'math_symbols':1,
+      \ 'styles':1
+      \ }
+
+Plug 'ajh17/VimCompletesMe'
+  function! GoTex()
+    setlocal spell
+    set conceallevel=2
+  endfunction
+  augroup VimCompletesMeTex
+    autocmd!
+    autocmd FileType tex
+        \ let b:vcm_omni_pattern = g:vimtex#re#neocomplete
+    autocmd FileType tex call GoTex()
+  augroup END
+
+Plug 'SirVer/ultisnips'
+  let g:UltiSnipsExpandTrigger="<c-u>"
+  let g:UltiSnipsJumpForwardTrigger="<c-i>"
+  let g:UltiSnipsJumpBackwardTrigger="<c-o>"
+
+Plug 'tmux-plugins/vim-tmux-focus-events'
+
 Plug 'qpkorr/vim-bufkill'
 
 Plug 'tpope/vim-unimpaired'
-
-Plug 'ajh17/VimCompletesMe'
 
 Plug 'JuliaEditorSupport/julia-vim', { 'for' : 'julia' }
 
@@ -60,14 +111,23 @@ Plug 'prettier/vim-prettier', { 'do': 'yarn install' }
 
 
 Plug 'psf/black', { 'branch': 'stable' , 'for' : 'python'}
-augroup pycmds
-  autocmd! pycmds
-  autocmd BufWritePre *.py execute ':Black'
-  " autocmd BufWritePre *.py call s:SafeFormat()
-  " I've found a bug where sometimes black messes up Semshi's highlighting
-  " this is a horrible fix. God have mercy.
-  autocmd BufWritePost *.py execute ':Semshi highlight'
-augroup end
+  function! s:SafeFormat()
+    let s:pos = getpos( '. ')
+    let s:view = winsaveview()
+    execute ':Black'
+    execute ':Semshi highlight'
+    call setpos( '.', s:pos )
+    call winrestview( s:view )
+  endfunc
+  augroup pycmds
+    autocmd! pycmds
+    " autocmd BufWritePre *.py execute ':Black'
+    " I've found a bug where sometimes black messes up Semshi's highlighting
+    " this is a horrible fix. God have mercy.
+    " autocmd BufWritePost *.py execute ':Semshi highlight'
+    autocmd FileType python nmap <leader><leader>b :call <SID>SafeFormat()<CR>
+  augroup end
+
 
 Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
   function! MySemshiColors()
@@ -96,6 +156,29 @@ Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
     autocmd FileType python call GoSemshi()
     autocmd ColorScheme * call MySemshiColors()
   augroup end
+
+Plug 'jpalardy/vim-slime'
+  let g:slime_target = "tmux"
+  let g:slime_paste_file = tempname()
+  let g:slime_default_config = {"socket_name": get(split($TMUX, ","), 0), "target_pane": ":.2"}
+  let g:slime_dont_ask_default = 1
+  let g:slime_python_ipython = 1
+  let g:slime_no_mappings = 1
+  let g:slime_cell_delimiter='#%%'
+  function! RegionHandler()
+    " wouldn't it be nice to move to the next cell after sending the current
+    " one? oh if only there was a way to do it...
+    call slime#send_cell()
+    call search(g:slime_cell_delimiter, 'W')
+    execute 'normal! zz'
+  endfunction
+  augroup slimecmds
+    autocmd! slimecmds
+    autocmd FileType python xmap <leader><leader>p <Plug>SlimeRegionSend
+    autocmd FileType python nmap <leader><leader>p <Plug>SlimeParagraphSend
+    autocmd FileType python nmap <leader><leader>r :call RegionHandler()<CR>
+  augroup END
+
 
 " God this plugin is good. Live rendering, cursor syncing
 " Makes previewing my vimkikis hella easy
@@ -237,6 +320,12 @@ Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
 
 Plug 'preservim/nerdtree'
   map <C-n> :NERDTreeToggle<CR>
+  let NERDTreeMinimalUI = 1
+  let NERDTreeDirArrows = 1
+  let NERDTreeQuitOnOpen = 1
+  " Exit Vim if NERDTree is the only window left.
+  autocmd BufEnter * if tabpagenr('$') == 1 && winnr('$') == 1 && exists('b:NERDTree') && b:NERDTree.isTabTree() |
+    \ quit | endif
 
 Plug 'Xuyuanp/nerdtree-git-plugin'
 
@@ -246,6 +335,7 @@ Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
 
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
+
 
 " }}}
 " ============================================================================
@@ -355,6 +445,13 @@ let g:python_host_prog="~/miniconda3/envs/neovim2/bin/python"
 " https://salferrarello.com/vim-close-all-buffers-except-the-current-one/
 command! Bonly execute '%bdelete|edit #|normal `"'
 
+" convenient mapping to quickly correct the last spelling mistake while in
+" inser mode. Requires :set spell
+inoremap <C-f> <c-g>u<Esc>[s1z=`]a<c-g>u
+
+" Type a replacement term and press . to repeat the replacement again. Useful
+" for replacing a few instances of the term (comparable to multiple cursors)
+nnoremap <silent> s* :let @/='\<'.expand('<cword>').'\>'<CR>cgn
 
 " ======================
 " FREQUENTLY USED LEADER
@@ -383,11 +480,16 @@ nnoremap <leader>- :BD<Cr>
 " ===================
 " INFREQUENT MAPPINGS (use double leader)
 " ===================
+
+" alternate between current file and alternate file
 nnoremap <leader><leader>a <C-^>
 
-" Type a replacement term and press . to repeat the replacement again. Useful
-" for replacing a few instances of the term (comparable to multiple cursors)
-nnoremap <silent> s* :let @/='\<'.expand('<cword>').'\>'<CR>cgn
+" execute current line in shell and paste results above it
+nnoremap <leader><leader>ex !!bash<CR>
+
+" Dictionary (l)ookup
+" nnoremap <leader>l :execute "!xdg-open https://www.merriam-webster.com/dictionary/" . expand('<cword>')<CR>
+" nnoremap <leader><leader>l :execute "!xdg-open \"https://www.dictionary.com/browse/" . expand('<cword>') . "?s=t\""<CR>
 
 " open current file at current position in visual studio code, the double
 " getpos is ugly as fuck but... na mindegy

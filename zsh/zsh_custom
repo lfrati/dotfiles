@@ -56,28 +56,6 @@ pymux(){
   fi
 }
 
-ipysplit(){
-
-  if [[ "$TMUX" == "" ]]; then
-    echo "Must be run inside Tmux."
-    return
-  fi
-
-  if [[ "$CONDA_PREFIX" != *"/envs/"* ]]; then
-    echo "Activate a conda environment with ipython first."
-    return
-  fi
-  CONDA_ENV=$(basename $CONDA_PREFIX)
-  tmux split-window -h -p 30
-  tmux send-keys 'conda activate ' $CONDA_ENV C-m
-  tmux send-keys 'clear' C-m
-  tmux send-keys 'ipython' C-m
-  tmux send-keys '%load_ext autoreload' Enter
-  tmux send-keys '%autoreload 2' Enter
-
-
-}
-
 pyentr(){
   if [[ "$CONDA_PREFIX" != *"/envs/"* ]]; then
     echo "Activate a conda environment first."
