@@ -39,7 +39,28 @@ syntax on
 
 call plug#begin('~/.vim/plugged')
 
-Plug 'jiangmiao/auto-pairs'
+
+Plug 'airblade/vim-gitgutter'
+  let g:gitgutter_map_keys = 0
+
+" Plug 'jiangmiao/auto-pairs'
+" I find myself having to delete the second one most of the time, worth it?
+
+" Plug 'universal-ctags/ctags'         
+  " Tags management
+
+Plug 'ludovicchabant/vim-gutentags'
+  " Ctrl + ] easy tag, easy life
+  " Do not pollute projects with tag files, keep them all in one place.
+  let g:gutentags_cache_dir = '~/.tags_dir'
+
+" Plug 'junegunn/limelight.vim'
+"   " Color name (:help cterm-colors) or ANSI code
+"   let g:limelight_conceal_ctermfg = 'gray'
+"   let g:limelight_conceal_ctermfg = 240
+"   " Color name (:help gui-colors) or RGB color
+"   let g:limelight_conceal_guifg = 'DarkGray'
+"   let g:limelight_conceal_guifg = '#777777'
 
 Plug 'lervag/vimtex', {'for' : 'tex'}
   " let g:vimtex_view_general_viewer = 'zathura'
@@ -50,16 +71,17 @@ Plug 'lervag/vimtex', {'for' : 'tex'}
   let g:vimtex_view_general_options = '--unique file:@pdf\#src:@line@tex'
   let g:vimtex_view_general_options_latexmk = '--unique' 
   let g:tex_flavor='latex'
-  " TOC settings
+  " TOC settings, toggle with <leader>lt
   let g:vimtex_toc_config = {
         \ 'name' : 'TOC',
-        \ 'layers' : ['content', 'todo', 'include'],
+        \ 'layers' : ['content', 'todo'],
         \ 'resize' : 1,
         \ 'split_width' : 50,
         \ 'todo_sorted' : 0,
         \ 'show_help' : 1,
         \ 'show_numbers' : 1,
-        \ 'mode' : 2,
+        \ 'mode' : 1,
+        \ 'split_pos' : 'full'
         \}
   let g:vimtex_syntax_conceal = {
       \ 'accents':0,
@@ -72,6 +94,9 @@ Plug 'lervag/vimtex', {'for' : 'tex'}
       \ 'math_symbols':1,
       \ 'styles':1
       \ }
+  let g:vimtex_quickfix_ignore_filters = [
+          \ 'Underfull',
+          \]
 
 Plug 'ajh17/VimCompletesMe'
   function! GoTex()
@@ -93,13 +118,18 @@ Plug 'SirVer/ultisnips'
 Plug 'tmux-plugins/vim-tmux-focus-events'
 
 Plug 'qpkorr/vim-bufkill'
-
-Plug 'tpope/vim-unimpaired'
+  " close buffer, but keep split
 
 Plug 'JuliaEditorSupport/julia-vim', { 'for' : 'julia' }
 
 Plug 'plasticboy/vim-markdown'
   let g:vim_markdown_folding_disabled = 1
+
+" God this plugin is good. Live rendering, cursor syncing
+" Makes previewing my vimkikis hella easy
+Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install', 'for':['markdown','vimwiki'] }
+  " nmap <leader>md <Plug>MarkdownPreviewToggle
+  nmap <leader>m <Plug>MarkdownPreviewToggle
 
 " post install (yarn install | npm install) then load plugin only for editing supported files
 Plug 'prettier/vim-prettier', { 'do': 'yarn install' }
@@ -109,6 +139,7 @@ Plug 'prettier/vim-prettier', { 'do': 'yarn install' }
     autocmd BufWritePre *.js,*.jsx,*.mjs,*.ts,*.tsx,*.css,*.less,*.scss,*.json,*.graphql,*.md,*.vue,*.yaml,*.html PrettierAsync
   augroup end
 
+Plug 'tpope/vim-fugitive'
 
 Plug 'psf/black', { 'branch': 'stable' , 'for' : 'python'}
   function! s:SafeFormat()
@@ -126,8 +157,12 @@ Plug 'psf/black', { 'branch': 'stable' , 'for' : 'python'}
     " this is a horrible fix. God have mercy.
     " autocmd BufWritePost *.py execute ':Semshi highlight'
     autocmd FileType python nmap <leader><leader>b :call <SID>SafeFormat()<CR>
+    command! Isort :! isort %
+    command! Flake :! autoflake --in-place --remove-all-unused-imports %
   augroup end
 
+" Plug 'jeetsukumaran/vim-pythonsense'
+"   let g:is_pythonsense_suppress_motion_keymaps = 1
 
 Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
   function! MySemshiColors()
@@ -157,6 +192,8 @@ Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
     autocmd ColorScheme * call MySemshiColors()
   augroup end
 
+
+
 Plug 'jpalardy/vim-slime'
   let g:slime_target = "tmux"
   let g:slime_paste_file = tempname()
@@ -164,7 +201,7 @@ Plug 'jpalardy/vim-slime'
   let g:slime_dont_ask_default = 1
   let g:slime_python_ipython = 1
   let g:slime_no_mappings = 1
-  let g:slime_cell_delimiter='#%%'
+  let g:slime_cell_delimiter='# *%%'
   function! RegionHandler()
     " wouldn't it be nice to move to the next cell after sending the current
     " one? oh if only there was a way to do it...
@@ -174,17 +211,54 @@ Plug 'jpalardy/vim-slime'
   endfunction
   augroup slimecmds
     autocmd! slimecmds
-    autocmd FileType python xmap <leader><leader>p <Plug>SlimeRegionSend
-    autocmd FileType python nmap <leader><leader>p <Plug>SlimeParagraphSend
-    autocmd FileType python nmap <leader><leader>r :call RegionHandler()<CR>
+    autocmd FileType python,haskell xmap <leader><leader>p <Plug>SlimeRegionSend
+    " autocmd FileType python,haskell nmap <leader><leader>p <Plug>SlimeParagraphSend
+    autocmd FileType python,haskell nmap <leader><leader>p :call SlimeParagraphChecked()<CR>
+    " autocmd FileType python,haskell nmap <leader><leader>r :call RegionHandler()<CR>
+    autocmd FileType python,haskell nmap <leader><leader>r :call SlimeRegionChecked()<CR>
   augroup END
-
-
-" God this plugin is good. Live rendering, cursor syncing
-" Makes previewing my vimkikis hella easy
-Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install', 'for':['markdown','vimwiki'] }
-  " nmap <leader>md <Plug>MarkdownPreviewToggle
-  nmap <leader>m <Plug>MarkdownPreviewToggle
+  " from https://jdhao.github.io/2020/11/15/nvim_text_objects/
+  function! s:CellTextObj() abort
+    " the parameter type specify whether it is inner text objects or around
+    " text objects. TODO what is this line?
+    " Move the cursor to the end of line in case that cursor is on the opening
+    " of a code block. Actually, there are still issues if the cursor is on the
+    " closing of a code block. In this case, the start row of code blocks would
+    " be wrong. Unless we can match code blocks, it is not easy to fix this.
+    normal! $
+    let start_row = searchpos('\s*# *%%', 'bnW')[0]
+    let end_row = searchpos('\s*# *%%', 'nW')[0]
+    let buf_num = bufnr()
+    " echo a:type start_row end_row
+    call setpos("'<", [buf_num, start_row + 1, 1, 0])
+    call setpos("'>", [buf_num, end_row, 1, 0])
+    execute 'normal! `<V`>'
+  endfunction
+  vnoremap <silent> ic :<C-U>call <SID>CellTextObj()<CR>
+  onoremap <silent> ic :<C-U>call <SID>CellTextObj()<CR>
+  function! SlimeREPLCheck()
+    let res = system("tmux list-panes -F '#{pane_current_command}'")
+    let pos = stridx(res, "python")
+    if pos > 0
+      return 1
+    else
+      echo "No REPL found in panes."
+      return 0
+    endif
+  endfunction
+  function! SlimeRegionChecked()
+    if SlimeREPLCheck()
+      call RegionHandler()
+    endif
+  endfunction
+  " https://github.com/jpalardy/vim-slime/blob/main/plugin/slime.vim
+  function! SlimeParagraphChecked()
+    if SlimeREPLCheck()
+      let start = line("'{")
+      let end = line("'}")
+      call slime#send_range(start,end)
+    endif
+  endfunction
 
 " The third component of the holy trinity of plugins
 " (fzf + vimwiki + easymotion)
@@ -231,7 +305,7 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
       \ 'active': {
       \   'left': [
       \             [ 'mode', 'paste','readonly'],
-      \             [ 'mymodified','modified' ],
+      \             [ 'modified' ],
       \             [ 'absolutepath' ]
       \           ],
       \   'right': [
@@ -249,6 +323,9 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
       \   'mymodified' : 'error',
       \ }
       \ }
+  let g:lightline.tabline = {
+		  \ 'left': [ [ 'tabs' ] ],
+		  \ 'right': [ [] ] }
   function! SetupLightlineColors() abort
     " transparent background in statusbar
     let l:palette = lightline#palette()
@@ -313,13 +390,15 @@ Plug 'tpope/vim-surround'
 Plug 'christoomey/vim-system-copy'   " cp/cv for copy paste e.g. cvi = paste inside '
 
 Plug 'tpope/vim-commentary'          " gc code away
+  nmap <Bslash> gcc
+  vmap <Bslash> gc
 
 Plug 'tpope/vim-repeat'          " Allows repeating some plugins operations using .
 
 Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
 
 Plug 'preservim/nerdtree'
-  map <C-n> :NERDTreeToggle<CR>
+  map <F4> :NERDTreeToggle<CR>
   let NERDTreeMinimalUI = 1
   let NERDTreeDirArrows = 1
   let NERDTreeQuitOnOpen = 1
@@ -330,7 +409,7 @@ Plug 'preservim/nerdtree'
 Plug 'Xuyuanp/nerdtree-git-plugin'
 
 Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
- let g:onedark_terminal_italics=1
+ " let g:onedark_terminal_italics=1
  let g:onedark_hide_endofbuffer=1
 
 " List ends here. Plugins become visible to Vim after this call.
@@ -369,13 +448,14 @@ set undolevels=1000                    " Use many muchos levels of undo
 set mouse=a                            " Enable use of the mouse for all modes
 " set notimeout ttimeout ttimeoutlen=200 " Quickly time out on keycodes, but never time out on mappings
 set completeopt=longest,menuone,noselect,noinsert,preview " show popup menu when at least one match but don't insert stuff
-set complete=.,w,b,u,t,kspell        " Check file -> window -> buffer -> hidden buffers -> tags -> spelling if enabled
-set omnifunc=syntaxcomplete#Complete " On <c-x><c-o> use the file syntax to guess possible completions
+set complete=.,w,b,u,kspell            " Check file -> window -> buffer -> hidden buffers -> spelling if enabled
+set omnifunc=syntaxcomplete#Complete   " On <c-x><c-o> use the file syntax to guess possible completions
 set autoread                           " Reload files changed outside vim
 set lazyredraw                         " Don't redraw while executing macros (good performance setting)
 set linebreak                          " Stop annoying 80 chars line wrapping
 set scrolloff=4                        " Leave some space above and below the cursor while scrolling
 set signcolumn=yes                     " Show the gutter for git info, errors...
+set cscopetag                          " Use :cstags instead on :tags on Ctrl-] to list multiple matches
 
 " Search down into subfolders
 " Provides tab-completion for all file-related tasks
@@ -437,6 +517,19 @@ set inccommand=split
 let g:python3_host_prog="~/miniconda3/envs/neovim3/bin/python"
 let g:python_host_prog="~/miniconda3/envs/neovim2/bin/python"
 
+" let g:netrw_browsex_viewer= "xdg-open"
+" let g:netrw_http_cmd="xdg-open"
+" None of the above works for some reason.
+" when xdg-open is selected it keeps passing it a tempfile name and the url, 
+" which makes xdg-open fail and then for some reason open my config file...
+" hacky workaround below
+nmap gx :silent execute "!xdg-open " . shellescape("<cWORD>")<CR>
+vmap gx <Esc>:silent execute "!xdg-open" . shellescape("<C-r>*") . " &"<CR>
+
+" with my current mapping [ and ] are adjacent so let's use [ to go back
+" Mysterious bugs happen if I have this on
+" nmap <C-[> <C-t> 
+
 " }}}
 " ============================================================================
 " Mappings {{{
@@ -488,7 +581,8 @@ nnoremap <leader><leader>a <C-^>
 nnoremap <leader><leader>ex !!bash<CR>
 
 " Dictionary (l)ookup
-" nnoremap <leader>l :execute "!xdg-open https://www.merriam-webster.com/dictionary/" . expand('<cword>')<CR>
+" nnoremap <leader><leader>l :execute "!xdg-open https://www.merriam-webster.com/dictionary/" . expand('<cword>')<CR>
+" nnoremap <leader><leader>h :execute "!xdg-open https://hoogle.haskell.org/\\?hoogle\\=" . expand('<cword>')<CR>
 " nnoremap <leader><leader>l :execute "!xdg-open \"https://www.dictionary.com/browse/" . expand('<cword>') . "?s=t\""<CR>
 
 " open current file at current position in visual studio code, the double
@@ -512,6 +606,27 @@ nmap Q <Nop>
 
 " Remap VIM 0 to first non-blank character
 map 0 ^
+
+function! EchoWarning(msg)
+  echohl WarningMsg
+  echo  a:msg
+  echohl None
+endfunction
+nnoremap <leader>init :e $MYVIMRC<CR>
+" Source vim configuration upon save
+augroup vimrccmds     
+    autocmd! vimrccmds
+    autocmd BufWritePost $MYVIMRC nested so % | call EchoWarning("Reloaded " . $MYVIMRC) | redraw
+augroup END
+
+
+" map esc to exit in terminal mode
+" OFC this messes up fzf.nvim, pressing esc now fucks up floating windows
+" tnoremap <Esc> <C-\><C-n>
+
+" I've remap <C-k> in tmux to move between panes, so I'll use this to insert
+" digraphs instead
+nnoremap <leader><leader>d i<C-K>
 
 " }}}
 " ============================================================================

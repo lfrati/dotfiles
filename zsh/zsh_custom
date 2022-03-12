@@ -2,7 +2,7 @@
 alias open='xdg-open'
 alias getsong="youtube-dl -x --output '%(title)s.%(ext)s' --audio-format mp3 -f bestaudio --add-metadata --no-playlist "
 alias mkreport="~/miniconda3/envs/deep/bin/jupyter nbconvert --template=/home/lapo/dotfiles/report.tpl --to=html "
-alias tasknext="while true; do clear && task next limit:5; sleep 3; done"
+# alias tasknext="while true; do clear && task next limit:5; sleep 3; done"
 alias untar="tar -xvf"
 alias untargz="tar -zxvf"
 alias untarbz2="tar -xvjf"
@@ -11,6 +11,14 @@ alias targzlist="tar -ztvf"
 alias tarbz2list="tar -jtvf"
 alias sizes="du -h --max-depth=1 | sort --human-numeric-sort"
 alias rcd="source ranger"
+# from https://superuser.com/a/1043815
+alias ranger='ranger --choosedir=$HOME/.rangerdir; LASTDIR=`cat $HOME/.rangerdir`; cd "$LASTDIR"'
+alias fiximports="isort . && autoflake -r --in-place --remove-unused-variables *.py"
+
+
+xgpuavail(){
+  nvidia-smi -q -i GPU-38d0c7a5-d024-2623-d699-057ac67713ba | grep "FB Memory Usage" -A 3 | grep "Free" | awk '{ print $3 " " $4 }'
+}
 
 pymux(){
   # Interactive editing of python files in tmux + ipython split
@@ -25,38 +33,33 @@ pymux(){
     return
   fi
 
+  if ! { [ -n "$TMUX" ]; } then
+    echo "Activate tmux first."
+    return
+  fi
+
   CONDA_ENV=$(basename $CONDA_PREFIX)
   echo "Conda env: $CONDA_ENV"
   echo "Editing $1"
-
-  # Am I in tmux already?
-  if ! { [ "$TERM" = "screen" ] && [ -n "$TMUX" ]; } then
-    # No, then create new session 
-    tmux new -d -x $(tput cols) -y $(tput lines)
-    # get session name to attach to it later
-    SESSION=$(tmux display-message -p "#S")
-    echo "Creating session $SESSION"
-    # start conda in the new session
-    tmux send-keys 'conda activate ' $CONDA_ENV C-m
-  fi
 
   tmux split-window -h -p 30
   tmux send-keys 'conda activate ' $CONDA_ENV C-m
   tmux send-keys 'clear' C-m
   tmux send-keys 'ipython' C-m
-  tmux send-keys '%load_ext autoreload' Enter
-  tmux send-keys '%autoreload 2' Enter
 
   # start with focus on vim
   tmux select-pane -L
   tmux send-keys 'nvim ' $1 C-m
 
-  if [ "$SESSION" != "" ]; then
-    tmux attach-session -t $SESSION
-  fi
 }
 
 pyentr(){
+  # rerun python scripts on file change
+  if [[ "$1" != *.py ]]; then
+    echo "Please select a python script."
+    return
+  fi
+
   if [[ "$CONDA_PREFIX" != *"/envs/"* ]]; then
     echo "Activate a conda environment first."
     return
@@ -116,31 +119,31 @@ getbib(){
 
 # }
 
-papers() {
-  # Use fzf to search within the text of my Zotero papers and open them
-	RG_PREFIX="rga --files-with-matches"
-  ORIGIN=$(pwd)
-  cd /home/lapo/Dropbox/Apps/Zotero
-	local file
-	file="$(
-		FZF_DEFAULT_COMMAND="$RG_PREFIX '$1'" \
-			fzf --sort --preview="[[ ! -z {} ]] && rga --pretty --context 5 {q} {}" \
-				--phony -q "$1" \
-				--bind "change:reload:$RG_PREFIX {q}" \
-				--preview-window="50%:wrap"
-	)"
+# papers() {
+#   # Use fzf to search within the text of my Zotero papers and open them
+# 	RG_PREFIX="rga --files-with-matches"
+#   ORIGIN=$(pwd)
+#   cd /home/lapo/Dropbox/Apps/Zotero
+# 	local file
+# 	file="$(
+# 		FZF_DEFAULT_COMMAND="$RG_PREFIX '$1'" \
+# 			fzf --sort --preview="[[ ! -z {} ]] && rga --pretty --context 5 {q} {}" \
+# 				--phony -q "$1" \
+# 				--bind "change:reload:$RG_PREFIX {q}" \
+# 				--preview-window="50%:wrap"
+# 	)"
 
-  if [ -z "$file" ]
-  then
-    echo "No file selected"
-  else
-    echo "opening: $file"
-    i3-msg layout tabbed &>/dev/null
-    xdg-open "$file" &>/dev/null
-  fi
+#   if [ -z "$file" ]
+#   then
+#     echo "No file selected"
+#   else
+#     echo "opening: $file"
+#     i3-msg layout tabbed &>/dev/null
+#     xdg-open "$file" &>/dev/null
+#   fi
 
-  cd $ORIGIN
-}
+#   cd $ORIGIN
+# }
 
 waconfig(){
   # Set up my old wacom bamboo touch, turning off touch and mapping it to the left screen
@@ -152,12 +155,13 @@ waconfig(){
   # echo stylus $stylusID
 
   # Map stylus/eraser to main monitor +1920+0 for secondary monitor
-  xsetwacom set $stylusID MapToOutput 1920x1080+0+0
-  xsetwacom set $eraserID MapToOutput 1920x1080+0+0
+  # Using vertical monitor size is 1080x1920 so offset is 1080
+  xsetwacom set $stylusID MapToOutput 1920x1080+1080+0
+  xsetwacom set $eraserID MapToOutput 1920x1080+1080+0
 
   # Set left-handed mode to have more convenient cable direction to pc
-  xsetwacom set $stylusID rotate HALF
-  xsetwacom set $eraserID rotate HALF
+  # xsetwacom set $stylusID rotate HALF
+  # xsetwacom set $eraserID rotate HALF
 
   # Touch support sucks
   xsetwacom set $touchID TOUCH off
@@ -196,8 +200,89 @@ bright(){
   fi
 }
 
+sshmnt(){
+  if [ "$#" -ne 2 ]; then
+      # https://stackoverflow.com/a/18568726
+      echo "Usage: sshmnt server folder"
+  else
+      sshfs -o follow_symlinks "$1:" "$2"
+  fi
+}
+
+sshunmnt(){
+  if [ "$#" -ne 1 ]; then
+      # https://stackoverflow.com/a/18568726
+      echo "Usage: sshunmnt folder"
+  else
+      fusermount3 -u "$1"
+  fi
+}
+
+rsend(){
+  if [ "$#" -ne 2 ]; then
+      # https://stackoverflow.com/a/18568726
+      echo "Usage: rsend  folder server"
+  else
+      # -a                      archive mode (contains recursive)
+      # -h                      human readable
+      # --update only           change older files (don't risk sending an old version and overwrite newer stuff)
+      # --info=progress2        show progress about the whole transfer
+      # --filer=':- .gitignore' respect .gitignore
+      while true; do
+        # https://superuser.com/a/556006
+        read "yn?> Send FROM=\"$1\" TO=\"$2\"?[y/N] "
+        case $yn in
+            [Yy]* ) rsync -ahz --update --info=progress2 --filter=':- .gitignore' $1 $2 ; break;;
+            * ) break;;
+        esac
+      done
+  fi
+}
+
+SNURM_CLIENT_PATH="/home/lapo/git/SNURM/client.py"
+SNURM_SERVER_PATH="/home/lapo/git/SNURM/server.py"
+
+sstart(){
+  python $SNURM_SERVER_PATH
+}
+
+sadd(){
+  CMD="$*"
+
+  if [[ "$CONDA_PREFIX" != *"/envs/"* ]]; then
+    echo "Activate a conda environment first."
+    return
+  fi
+  CONDA_ENV=$(basename $CONDA_PREFIX)
+  echo "Conda env: $CONDA_ENV"
+  echo "Command: $CMD"
+
+  OUT=$(python $SNURM_CLIENT_PATH "add" --cmd "$CMD" --env "$CONDA_ENV")
+  slist
+}
+
+slist(){
+  STATUS=$(python $SNURM_CLIENT_PATH "list")
+  echo $STATUS
+}
+
+skill(){
+  STATUS=$(python $SNURM_CLIENT_PATH "skill")
+  echo $STATUS
+}
+
+scancel(){
+  ID=$1
+  STATUS=$(python $SNURM_CLIENT_PATH "cancel" --id "$1")
+  echo $STATUS
+}
+
+punzip(){
+   unzip $1 | pv -l -s $(unzip -Z -1 $1 | wc -l) > /dev/null;
+}
+
 bindkey -r "^[x"
 bindkey -s '^o' 'ranger\n'
 # Edit line in vim with ctrl-e:
 autoload edit-command-line; zle -N edit-command-line
-bindkey '^e' edit-command-line
+bindkey '^{e' edit-command-line

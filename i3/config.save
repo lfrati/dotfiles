@@ -9,8 +9,7 @@
 #
 # Please see https://i3wm.org/docs/userguide.html for a complete reference!
 
-# Mod1=ALT_L right since it's to the right of Control...
-set $modright Mod1 
+set $modright Mod1 # Mod1=ALT_L right since it's to the right of Control...
 set $modleft Control
 
 # Remove window title, TODO: do I want this?
@@ -66,6 +65,7 @@ floating_modifier $modright
 # bindsym $modright+Return exec i3-sensible-terminal
 # bindsym $modright+Return exec gnome-terminal
 # bindsym $modright+Return exec urxvt 
+kkk
 bindsym $modright+Return exec --no-startup-id alacritty
 
 # i3-sensible-terminal checks the following terminals in this order:
@@ -119,8 +119,8 @@ bindsym $modright+l focus right
 bindsym $modright+h focus left
 
 # cycle through workspaces
-bindsym $modright+Left workspace prev_on_output
-bindsym $modright+Right workspace next_on_output
+# bindsym $modleft+Left workspace prev_on_output
+# bindsym $modleft+Right workspace next_on_output
 
 # bindsym $modright+Down focus down
 # bindsym $modright+Up focus up
@@ -176,37 +176,37 @@ set $ws9 "9"
 set $ws10 "10"
 
 # switch to workspace
-bindsym $modleft+1 workspace number $ws1
-bindsym $modleft+2 workspace number $ws2
-bindsym $modleft+3 workspace number $ws3
-bindsym $modleft+4 workspace number $ws4
-bindsym $modleft+5 workspace number $ws5
-bindsym $modright+1 workspace number $ws6
-bindsym $modright+2 workspace number $ws7
-bindsym $modright+3 workspace number $ws8
-bindsym $modright+4 workspace number $ws9
-bindsym $modright+5 workspace number $ws10
+bindsym $modleft+6 workspace number $ws1
+bindsym $modleft+7 workspace number $ws2
+bindsym $modleft+8 workspace number $ws3
+bindsym $modleft+9 workspace number $ws4
+bindsym $modleft+0 workspace number $ws5
+bindsym $modright+6 workspace number $ws6
+bindsym $modright+7 workspace number $ws7
+bindsym $modright+8 workspace number $ws8
+bindsym $modright+9 workspace number $ws9
+bindsym $modright+0 workspace number $ws10
 
 # move focused container to workspace
-bindsym $modleft+Shift+1 move container to workspace number $ws1
-bindsym $modleft+Shift+2 move container to workspace number $ws2
-bindsym $modleft+Shift+3 move container to workspace number $ws3
-bindsym $modleft+Shift+4 move container to workspace number $ws4
-bindsym $modleft+Shift+5 move container to workspace number $ws5
-bindsym $modright+Shift+1 move container to workspace number $ws6
-bindsym $modright+Shift+2 move container to workspace number $ws7
-bindsym $modright+Shift+3 move container to workspace number $ws8
-bindsym $modright+Shift+4 move container to workspace number $ws9
-bindsym $modright+Shift+5 move container to workspace number $ws10
+bindsym $modleft+Shift+6 move container to workspace number $ws1
+bindsym $modleft+Shift+7 move container to workspace number $ws2
+bindsym $modleft+Shift+8 move container to workspace number $ws3
+bindsym $modleft+Shift+9 move container to workspace number $ws4
+bindsym $modleft+Shift+0 move container to workspace number $ws5
+bindsym $modright+Shift+6 move container to workspace number $ws6
+bindsym $modright+Shift+7 move container to workspace number $ws7
+bindsym $modright+Shift+8 move container to workspace number $ws8
+bindsym $modright+Shift+9 move container to workspace number $ws9
+bindsym $modright+Shift+0 move container to workspace number $ws10
 
 # open matplotlib windows as floating https://major.io/2019/02/08/automatic-floating-windows-in-i3/
 # use the script i3_window_info.sh to title/class
 for_window [title="Figure 1"] floating enable # Make matplotlib plots float, for when I use the terminal
 for_window [class="Makie"] floating enable # Make Makie.jl plots float, for when I use the terminal
 for_window [class="Makie"] move position center
-# for_window [class="Surf"] floating enable # Used mainly for quickly googling something
-# for_window [class="Surf"] resize set 1280 960
-# for_window [class="Surf"] move position center
+for_window [class="Surf"] floating enable # Used mainly for quickly googling something
+for_window [class="Surf"] resize set 1280 960
+for_window [class="Surf"] move position center
 
 # reload the configuration file
 bindsym $modright+Shift+c reload
@@ -216,37 +216,35 @@ bindsym $modright+Shift+r restart
 bindsym $modright+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
 
 # # resize window (you can also use the mouse for that)
-mode "resize" {
-        # These bindings trigger as soon as you enter the resize mode
+# mode "resize" {
+#         # These bindings trigger as soon as you enter the resize mode
 
-        # Pressing left will shrink the window’s width.
-        # Pressing right will grow the window’s width.
-        # Pressing up will shrink the window’s height.
-        # Pressing down will grow the window’s height.
-        bindsym j resize shrink height 10 px or 10 ppt
-        bindsym k resize grow height 10 px or 10 ppt
-        bindsym l resize grow width 10 px or 10 ppt
-        bindsym h resize shrink width 10 px or 10 ppt
+#         # Pressing left will shrink the window’s width.
+#         # Pressing right will grow the window’s width.
+#         # Pressing up will shrink the window’s height.
+#         # Pressing down will grow the window’s height.
+#         bindsym j resize shrink height 10 px or 10 ppt
+#         bindsym k resize grow height 10 px or 10 ppt
+#         bindsym l resize grow width 10 px or 10 ppt
+#         bindsym h resize shrink width 10 px or 10 ppt
 
-        # # same bindings, but for the arrow keys
-        # bindsym Left resize shrink width 10 px or 10 ppt
-        # bindsym Down resize grow height 10 px or 10 ppt
-        # bindsym Up resize shrink height 10 px or 10 ppt
-        # bindsym Right resize grow width 10 px or 10 ppt
+#         # same bindings, but for the arrow keys
+#         bindsym Left resize shrink width 10 px or 10 ppt
+#         bindsym Down resize grow height 10 px or 10 ppt
+#         bindsym Up resize shrink height 10 px or 10 ppt
+#         bindsym Right resize grow width 10 px or 10 ppt
 
-        # back to normal: Enter or Escape or $modright+r
-        bindsym Return mode "default"
-        bindsym Escape mode "default"
-        bindsym $modright+r mode "default"
-}
-bindsym $modright+r mode "resize"
+#         # back to normal: Enter or Escape or $modright+r
+#         bindsym Return mode "default"
+#         bindsym Escape mode "default"
+#         bindsym $modright+r mode "default"
+# }
+# bindsym $modright+r mode "resize"
 
 # Start i3bar to display a workspace bar (plus the system information i3status
 # finds out, if available)
 # bar {
-#         # status_command i3status
-#         mode hide
-#         modifier $modright
+#         status_command i3status
 # }
 # bar {
 #         status_command i3blocks
@@ -289,7 +287,7 @@ bindsym $modright+Tab workspace back_and_forth
 # CTRL+TAB is used by Firefox for tabs and by vim for tags
 # bindsym $modleft+Tab workspace back_and_forth
 
-bindsym $modright+g exec firefox --new-tab 'https://www.google.com' 
+# bindsym $modright+g exec firefox --new-tab 'https://www.google.com' 
 # bindsym $modleft+g exec surf 'https://www.google.com' 
 
 ##############################################################
@@ -299,7 +297,7 @@ bindsym $modright+g exec firefox --new-tab 'https://www.google.com'
 # setup with vertical monitor to the right
 # exec_always --no-startup-id feh --bg-center /home/lapo/dotfiles/archwall.png --bg-center /home/lapo/dotfiles/arch_vert.png
 # setup with horizontal monitor to the right
-exec_always --no-startup-id feh --bg-center /home/lapo/dotfiles/arch_vert.png --bg-center /home/lapo/dotfiles/archwall.png
+exec_always --no-startup-id feh --bg-center /home/lapo/dotfiles/archwall.png --bg-center /home/lapo/dotfiles/archwall.png
 # now set through my keyboard remapping features
 # exec_always --no-startup-id setxkbmap -option caps:swapescape 
 exec_always --no-startup-id xset b off # turn off annoying beeps every time I search a word in a web page
@@ -307,7 +305,7 @@ exec_always --no-startup-id xset b off # turn off annoying beeps every time I se
 # exec --no-startup-id xrandr --output HDMI-0 --auto --right-of DVI-D-0 --rotate left
 exec --no-startup-id volumeicon
 exec --no-startup-id dropbox start
-# exec --no-startup-id mpd # music demon to control with mpc and connect to with ncmpcpp
+exec --no-startup-id mpd # music demon to control with mpc and connect to with ncmpcpp
 exec --no-startup-id dunst # notification daemon, supports html, notify-send...
 exec --no-startup-id tilda # diary/notes + scratch terminal
 exec --no-startup-id unclutter # hide mouse when idle 

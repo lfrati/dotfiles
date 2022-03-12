@@ -39,8 +39,8 @@
 
 # Examples of commands:
 
-# "xbindkeys_show" 
-#   control+shift + q
+"xbindkeys_show" 
+  control+shift+w
 
 # # set directly keycode (here control + f with my keyboard)
 # "xterm"
@@ -86,6 +86,14 @@
 
 "mpc prev"
    XF86AudioPrev
+
+# Switch between workspaces with top mouse button 
+"xdotool key 'Alt_L+Tab'"
+  b:9
+
+# Switch between browser tabs with bottom mouse button 
+"xdotool key 'Control_L+Tab'"
+  b:8
 
 ##################################
 # End of xbindkeys configuration #

@@ -12,9 +12,10 @@ session="dash"
 # Check if the session exists, discarding output
 # We can check $? for the exit status (zero for success, non-zero for failure)
 tmux has-session -t $session 2>/dev/null
-tmux set status off
 
 if [ $? != 0 ]; then
+
+  echo "Setting up"
 
   # set up tmux
   tmux start-server
@@ -24,28 +25,21 @@ if [ $? != 0 ]; then
   tmux new-session -d -s $session -x $(tput cols) -y $(tput lines)
 
   # Pane 2
-  # Split pane 1 horizontally to make room for GPU/CPU info
-  tmux splitw -h -p 34
+  # Make thin bottom pane for music
+  tmux splitw -f -v -p 40
 
   # Pane 3
-  # Make thin bottom pane for music
-  tmux splitw -f -v -p 30
-
-  # Pane 4
-  tmux splitw -h
+  tmux splitw -h -p 60
 
   # Assign tasks to each pane
   tmux selectp -t 1
   tmux send-keys "htop" C-m
 
-  tmux selectp -t 2
-  tmux send-keys "watch --no-title -n 5 nvidia-smi" C-m
+  # tmux selectp -t 2
+  # tmux send-keys "ncmpcpp" C-m
 
   tmux selectp -t 3
-  tmux send-keys "ncmpcpp" C-m
-
-  tmux selectp -t 4
-  tmux send-keys "vit" C-m
+  tmux send-keys "watch --no-title -n 5 nvidia-smi -i GPU-9806b0a0-d4f8-3fc1-06aa-53716a16702e" C-m
 
 
 fi

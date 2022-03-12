@@ -127,7 +127,7 @@ source $DOTFILES/zsh/prompt
 # --glob: Additional conditions for search (in this case ignore everything in the .git/ folder)
 export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow --glob "!.git/*"'
 # use fd so I can ignore the 70 fucking thousand folders of miniconda
-export FZF_ALT_C_COMMAND='fd --type d --exclude miniconda3/'
+export FZF_ALT_C_COMMAND='fd --type d --type l --exclude miniconda3/ --no-ignore-vcs'
 export FZF_ALT_C_OPTS='--preview="tree -L 1 {}" --bind=space:toggle-preview --preview-window=:hidden'
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
@@ -145,6 +145,9 @@ export PATH="$PATH:$HOME/.cabal/bin"
 export PATH="$PATH:$(yarn global bin)"
 
 export PYTHONPATH="$PYTHONPATH:."
+# https://docs.python-guide.org/writing/gotchas/#bytecode-pyc-files-everywhere
+# stop generating .pyc files everywhere
+export PYTHONDONTWRITEBYTECODE=1
 
 export JULIA_LOAD_PATH=".:$JULIA_LOAD_PATH"
 

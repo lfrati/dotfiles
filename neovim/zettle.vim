@@ -407,7 +407,10 @@ fun! GoVimwiki()
   " Link navigation mappings
   nmap <buffer> <TAB> <Plug>VimwikiNextLink
   nmap <buffer> <S-TAB> <Plug>VimwikiPrevLink
-  nmap <buffer> <BS> <Plug>VimwikiGoBackLink
+  " nmap <buffer> <backspace> <Plug>VimwikiGoBackLink
+  " vimwiki uses backspace to go back to previous note, but it just makes such
+  " a mess when I press it accidentally, let's intead delete the previous word
+  nmap <buffer> <backspace>  bdaw
   " replaced by my link management functions
   " nmap <buffer> <CR> <Plug>VimwikiFollowLink
   " File management mappings
@@ -422,9 +425,11 @@ fun! GoVimwiki()
   " vim(W)iki (I)nsert (Y)outube
   " nmap <buffer> <leader>wiy :call Insert_video_link()<CR>
   " vim(W)iki (B)ackup (Y)outube
-  nmap <buffer> <leader>wbl :call Backup_handler()<CR>
   nmap <buffer> <CR> :call <SID>Link_handler()<CR>
   nmap <buffer> <C-Space> <Plug>VimwikiToggleListItem
+  " TODO: rework this functionality, it's such a mess for now
+  " nmap <buffer> <leader>wbl :call Backup_handler()<CR>
+  " Also Past_handler could use some polishing/tests
   inoremap <C-v> <C-o>:call Paste_handler()<CR>
 endfun
 augroup vimwikicmds
@@ -530,7 +535,7 @@ function! Cite_handler(lines)
   " insert citations as [bibID](<path>)
   " handles multiple lines as :
   " [bibID](<path>),[bibID](<path>),[bibID](<path>)...
-  " note: skip the first element of a:lines because we ignore ctrl-l
+  " note: skip the first element of a:lines because we ignore ctrl-i
   if a:lines[0] == 'ctrl-i'
     echo a:lines
     return
@@ -549,9 +554,10 @@ function! Cite_handler(lines)
   endif
 endfunction
 function! Rg_handler(lines)
+  " use Enter to open file, use ctrl-i to insert link (needs to be called on a
+  " word)
   let l:lines = copy(a:lines)
   let l:filetype = &filetype
-  " Ctrl-l is used to reference notes (l->link)
   if l:lines[0] == 'ctrl-i'
     if len(l:lines) > 2 " only insert link if 1 files is selected, no multiselect
       return
@@ -767,7 +773,8 @@ function! GoVimwiki_FZF()
   " e.g. wft -> vim(W)iki (F)zf    (T)ags
   "      wic -> vim(W)iki (I)nsert (C)itation
   nnoremap <buffer> <leader>wft :Tags<CR>
-  nnoremap <buffer> <leader>wfq :Qf<CR>
+  " TODO: polish quickfix handling to refine searches, a-la telescope
+  " nnoremap <buffer> <leader>wfq :Qf<CR>
   nnoremap <buffer> <leader>wfp :Papers<CR>
   nnoremap <buffer> <leader>wfi :Incoming<CR>
   nnoremap <buffer> <leader>wfo :Outgoing<CR>

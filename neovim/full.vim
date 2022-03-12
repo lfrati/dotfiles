@@ -52,13 +52,6 @@ Plug 'qpkorr/vim-bufkill'
 " Too much power, my computer is not ready yet! ... (requires nigthly build)
 " Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}  " We recommend updating the parsers on update
 
-Plug 'mhinz/vim-startify'
- let g:startify_bookmarks = [
-       \ {'v': g:MY_VIMWIKIDIR . '/index.md' },
-       \ {'c': $MYVIMRC },
-       \ ]
- let g:startify_padding_left = 3
-
 Plug 'tpope/vim-unimpaired'
 
 Plug 'ajh17/VimCompletesMe'
@@ -70,76 +63,6 @@ Plug 'godlygeek/tabular'
 
 Plug 'plasticboy/vim-markdown'
   let g:vim_markdown_folding_disabled = 1
-
-Plug 'airblade/vim-gitgutter'
-  let g:gitgutter_map_keys = 0
-  function! GitChunks()
-    let [a,m,r] = GitGutterGetHunkSummary()
-    return printf('+%d ~%d -%d', a, m, r)
-  endfunction
-
-" post install (yarn install | npm install) then load plugin only for editing supported files
-Plug 'prettier/vim-prettier', { 'do': 'yarn install' }
-  nmap <Leader>p <Nop>
-  augroup prettiercmds
-    autocmd! prettiercmds
-    autocmd BufWritePre *.js,*.jsx,*.mjs,*.ts,*.tsx,*.css,*.less,*.scss,*.json,*.graphql,*.md,*.vue,*.yaml,*.html PrettierAsync
-  augroup end
-
-Plug 'fisadev/vim-isort'
-  let g:vim_isort_config_overrides = {'multi_line_output': 3}
-
-Plug 'psf/black', { 'branch': 'stable' }
-function! s:SafeFormat()
-  " because of fucking course isort conflicts with black and ends up resetting
-  " the cursor to the top. (I had commented an import and black wants spaces
-  " while isort doesn't, so isort would format them, bringing the cursor to
-  " the beginning every time I saved, then black would put the space back)
-  " Appartently is a known bug? https://github.com/fisadev/vim-isort/issues/15
-  let s:pos = getpos( '. ')
-  let s:view = winsaveview()
-  execute ':Isort'
-  execute ':Black'
-  call setpos( '.', s:pos )
-  call winrestview( s:view )
-endfunc
-augroup pycmds
-  autocmd! pycmds
-  " autocmd BufWritePre *.py execute ':Isort'
-  autocmd BufWritePre *.py execute ':Black'
-  " autocmd BufWritePre *.py call s:SafeFormat()
-  " I've found a bug where sometimes black messes up Semshi's highlighting
-  " this is a horrible fix. God have mercy.
-  autocmd BufWritePost *.py execute ':Semshi highlight'
-augroup end
-
-Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
-  function MySemshiColors()
-      hi semshiGlobal          ctermfg=red
-      hi semshiLocal           ctermfg=209
-      hi semshiGlobal          ctermfg=214
-      hi semshiImported        ctermfg=180
-      hi semshiParameter       ctermfg=75
-      hi semshiParameterUnused ctermfg=117  cterm=underline
-      hi semshiFree            ctermfg=218
-      hi semshiBuiltin         ctermfg=207
-      hi semshiAttribute       ctermfg=49
-      hi semshiSelf            ctermfg=249
-      hi semshiUnresolved      ctermfg=226  cterm=underline
-      hi semshiSelected        ctermfg=40 ctermbg=bg
-      hi semshiErrorSign       ctermfg=231  ctermbg=160
-      hi semshiErrorChar       ctermfg=231  ctermbg=160
-      sign define semshiError text=E> texthl=semshiErrorSign
-  endfunction
-  function GoSemshi()
-      nmap <buffer> <silent> <leader>rn :Semshi rename<CR>
-      nmap <buffer> <silent> <leader>er :Semshi goto error<CR>
-  endfunction
-  augroup semshicmds
-    autocmd! semshicmds
-    autocmd FileType python call GoSemshi()
-    autocmd ColorScheme * call MySemshiColors()
-  augroup end
 
 Plug 'jeetsukumaran/vim-pythonsense'
   " class OneRing(object):             -----------------------------+
@@ -162,36 +85,6 @@ Plug 'jeetsukumaran/vim-pythonsense'
   "         print("shadows lie.")      --------------------+        |
   "                                    -----------------------------+
   let g:is_pythonsense_suppress_motion_keymaps = 1
-
-Plug 'jpalardy/vim-slime'
-  let g:slime_target = "tmux"
-  let g:slime_paste_file = tempname()
-  let g:slime_default_config = {"socket_name": get(split($TMUX, ","), 0), "target_pane": ":.2"}
-  let g:slime_dont_ask_default = 1
-  let g:slime_python_ipython = 1
-  let g:slime_no_mappings = 1
-  let g:slime_cell_delimiter='#%%'
-  function! IpythonLoad()
-    let filename = expand("%:p")
-    exec 'SlimeSend1 %load ' . filename
-    " because of course when you load a script ipython waits patiently for you
-    " to press enter before actually executing it
-    exec 'SlimeSend1 "Script ' . filename . ' loaded."'
-  endfunction
-  function! RegionHandler()
-    call slime#send_cell()
-    call search(g:slime_cell_delimiter, 'W')
-    execute 'normal! zz'
-  endfunction
-  augroup slimecmds
-    autocmd! slimecmds
-    autocmd FileType python xmap <leader><leader>p <Plug>SlimeRegionSend
-    autocmd FileType python nmap <leader><leader>p <Plug>SlimeParagraphSend
-    autocmd FileType python nmap <leader><leader>r :call RegionHandler()<CR>
-    " autocmd FileType python nmap <leader><leader>r <Plug>SlimeSendCell
-    " autocmd FileType python nmap <leader><leader>r :SlimeSend1 %reset -f<CR>
-    " autocmd FileType python nmap <leader><leader>f :call IpythonLoad()<CR>
-  augroup END
 
 " God this plugin is good. Live rendering, cursor syncing
 " Makes previewing my vimkikis hella easy
@@ -229,34 +122,20 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
       \ 'colorscheme': 'onedark',
       \ 'active': {
       \   'left': [
-      \             [ 'mode', 'paste','readonly','coc_warning','coc_error'],
-      \             [ 'cocstatus','mymodified' ],
+      \             [ 'mode', 'paste','readonly'],
+      \             [ 'modified' ],
       \             [ 'absolutepath' ]
       \           ],
       \   'right': [
-      \              [ 'gitbranch','lineinfo' ],
-      \              [ 'sync' ]
+      \              [ 'lineinfo' ],
       \            ]
       \ },
       \ 'inactive': {
-      \ 'left': [ [ 'filename'],[ 'sync' ] ],
+      \ 'left': [ [ 'filename']],
       \ 'right': [ ['modified'] ]
       \ },
       \ 'component_function': {
-      \   'gitbranch': 'GitStatus',
       \   'filename': 'LightlineFilename',
-      \   'sync': 'SyncFlag',
-      \   'cocstatus': 'CocStatusMsg'
-      \ },
-      \ 'component_expand':{
-      \   'mymodified' : 'ModifiedFlag',
-      \   'coc_error' : 'LightlineCocErrors',
-      \   'coc_warning' : 'LightlineCocWarnings',
-      \ },
-      \ 'component_type':{
-      \   'mymodified' : 'error',
-      \   'coc_error' : 'error',
-      \   'coc_warning' : 'warning',
       \ }
       \ }
   " Component expand is called only once every time the statusline is updated
@@ -269,27 +148,6 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     autocmd FocusGained * checktime
     autocmd BufEnter * checktime
   augroup END
-  function! ModifiedFlag()
-    " for some reason it doesn't work with inactive buffers since it always shows
-    " the value of the active one.
-    return &modifiable && &modified ? '[+]' : ''
-	endfunction
-  function! SyncFlag()
-    "check if the window has the scrollbind flag set
-    return &scb == 0 ? '' : 'Syncd'
-   " scb has to be called on all the windows that we want to scrollbind
-  endfunction
-  function! GitStatus()
-    " check the branch name and display it with a fancy symbol
-    let l:head = FugitiveHead()
-    if l:head == ''
-      " return ' - '
-      return ''
-    else
-      " return ' ' . l:head . ' ' . GitChunks()
-      return ' ' . l:head
-    endif
-  endfunction
   " Show file path relative to git root or absolutepath
   " https://github.com/itchyny/lightline.vim/issues/293h
   function! LightlineFilename()
@@ -312,8 +170,6 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
     call lightline#colorscheme()
   endfunction
   autocmd! VimEnter * call SetupLightlineColors()
-  " nmap <leader>bind :windo set scb!<CR>
-  command! Bind :windo set scb!
 
 " Zen mode
 Plug 'junegunn/goyo.vim'
@@ -469,38 +325,42 @@ set lazyredraw                         " Don't redraw while executing macros (go
 set linebreak                          " Stop annoying 80 chars line wrapping
 set scrolloff=4                        " Leave some space above and below the cursor while scrolling
 set signcolumn=yes                     " Show the gutter for git info, errors...
-set foldlevel=99                       " Unfold folds by default, don't use nofoldenable, for some reason the foldlevel gets messed up
-" Foldlevel=99 means I have to zr 98 times before folding a second level fold
-" with the following autocmd I set the foldlevel value to the max fold level
-" in the file, -> the first zr folds the deepest level and so on
-function! FindFoldLevel()
-  return max(map(range(1, line('$')), 'foldlevel(v:val)'))
-endfunction
-" I'm not crazy, I swear for some reason folding didn't work properly
-function! MarkdownLevel()
-    if getline(v:lnum) =~ '^# .*$'
-        return ">1"
-    endif
-    if getline(v:lnum) =~ '^## .*$'
-        return ">2"
-    endif
-    if getline(v:lnum) =~ '^### .*$'
-        return ">3"
-    endif
-    if getline(v:lnum) =~ '^#### .*$'
-        return ">4"
-    endif
-    if getline(v:lnum) =~ '^##### .*$'
-        return ">5"
-    endif
-    if getline(v:lnum) =~ '^###### .*$'
-        return ">6"
-    endif
-    return "="
-endfunction
-autocmd BufReadPost *.md setlocal foldexpr=MarkdownLevel()
-autocmd BufReadPost *.md setlocal foldmethod=expr
-autocmd BufReadPost *.md let &foldlevel = FindFoldLevel()
+
+" I think these functions are causing some bugs in vimwiki, when I save lines
+" sometime get deleted and I think it's because of some interaction with
+" folding (maybe they are not deleted but just invisible?)
+" set foldlevel=99                       " Unfold folds by default, don't use nofoldenable, for some reason the foldlevel gets messed up
+" " Foldlevel=99 means I have to zr 98 times before folding a second level fold
+" " with the following autocmd I set the foldlevel value to the max fold level
+" " in the file, -> the first zr folds the deepest level and so on
+" function! FindFoldLevel()
+"   return max(map(range(1, line('$')), 'foldlevel(v:val)'))
+" endfunction
+" " I'm not crazy, I swear for some reason folding didn't work properly
+" function! MarkdownLevel()
+"     if getline(v:lnum) =~ '^# .*$'
+"         return ">1"
+"     endif
+"     if getline(v:lnum) =~ '^## .*$'
+"         return ">2"
+"     endif
+"     if getline(v:lnum) =~ '^### .*$'
+"         return ">3"
+"     endif
+"     if getline(v:lnum) =~ '^#### .*$'
+"         return ">4"
+"     endif
+"     if getline(v:lnum) =~ '^##### .*$'
+"         return ">5"
+"     endif
+"     if getline(v:lnum) =~ '^###### .*$'
+"         return ">6"
+"     endif
+"     return "="
+" endfunction
+" autocmd BufReadPost *.md setlocal foldexpr=MarkdownLevel()
+" autocmd BufReadPost *.md setlocal foldmethod=expr
+" autocmd BufReadPost *.md let &foldlevel = FindFoldLevel()
 
 " Search down into subfolders
 " Provides tab-completion for all file-related tasks
