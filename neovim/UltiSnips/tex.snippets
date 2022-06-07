@@ -48,33 +48,23 @@ snippet template "Basic template" b
 endsnippet
 
 snippet "^tab" "Table environment" rA
-\begin{table}[${1:htpb}]
+\begin{table}[ht]
 	\centering
-	\caption{${2:caption}}
-	\label{tab:${3:label}}
-	\begin{tabular}{${5:c}}
-	$0${5/((?<=.)c|l|r)|./(?1: & )/g}
+	\caption{}
+	\label{tab:}}
+	\begin{tabular}{c}
+		$0
 	\end{tabular}
 \end{table}
 endsnippet
 
 snippet "^fig" "Figure environment" rA
-\begin{figure}[${1:htpb}]
+\begin{figure}[ht]
 	\centering
 	\includegraphics[width=0.8\textwidth]{$0}
 	\caption{}
 	\label{fig:}
 \end{figure}
-endsnippet
-
-snippet "^sec" "Section" rA
-\section$0{$1}
-${2:\label{sec:${1/\W+//g}}}
-endsnippet
-
-snippet "^sub" "Subsection" rA
-\subsection$0{$1}
-\label{subsec:$1}
 endsnippet
 
 snippet "^enum" "Enumerate" rA
@@ -87,8 +77,4 @@ snippet "^item" "Itemize" rA
 \begin{itemize}
 	\item $0
 \end{itemize}
-endsnippet
-
-snippet "^pac" "Package" rA
-\usepackage[${1:options}]{${2:package}}$0
 endsnippet

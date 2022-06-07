@@ -39,31 +39,18 @@ syntax on
 
 call plug#begin('~/.vim/plugged')
 
-Plug 'junegunn/vim-easy-align'
-  " Start interactive EasyAlign in visual mode (e.g. vipga)
-  xmap ga <Plug>(EasyAlign)
+Plug 'tpope/vim-fugitive'
 
 Plug 'airblade/vim-gitgutter'
   let g:gitgutter_map_keys = 0
 
-" Plug 'jiangmiao/auto-pairs'
-" I find myself having to delete the second one most of the time, worth it?
-
-" Plug 'universal-ctags/ctags'         
+Plug 'universal-ctags/ctags'         
   " Tags management
 
 Plug 'ludovicchabant/vim-gutentags'
   " Ctrl + ] easy tag, easy life
   " Do not pollute projects with tag files, keep them all in one place.
   let g:gutentags_cache_dir = '~/.tags_dir'
-
-" Plug 'junegunn/limelight.vim'
-"   " Color name (:help cterm-colors) or ANSI code
-"   let g:limelight_conceal_ctermfg = 'gray'
-"   let g:limelight_conceal_ctermfg = 240
-"   " Color name (:help gui-colors) or RGB color
-"   let g:limelight_conceal_guifg = 'DarkGray'
-"   let g:limelight_conceal_guifg = '#777777'
 
 Plug 'lervag/vimtex', {'for' : 'tex'}
   " let g:vimtex_view_general_viewer = 'zathura'
@@ -101,6 +88,7 @@ Plug 'lervag/vimtex', {'for' : 'tex'}
       \ }
   let g:vimtex_quickfix_ignore_filters = [
           \ 'Underfull',
+          \ 'Overfull',
           \]
   let g:vimtex#re#neocomplete =
       \ '\v\\%('
@@ -127,6 +115,16 @@ Plug 'lervag/vimtex', {'for' : 'tex'}
       \ . '|\a*'
       \ . ')'
 
+Plug 'SirVer/ultisnips'
+  " used with vimtex to provide some basic snippes fig/table
+  " (in dotfiles/UltiSnips/tex.snippets)
+  " Triggered in .tex files by starting a line with that word so I'm disabling
+  " the snippet expand trigger
+  let g:UltiSnipsExpandTrigger = "<NUL>"
+  " let g:UltiSnipsExpandTrigger="<c-u>"
+  " let g:UltiSnipsJumpForwardTrigger="<c-i>"
+  " let g:UltiSnipsJumpBackwardTrigger="<c-o>"
+
 Plug 'ajh17/VimCompletesMe'
   function! GoTex()
     setlocal spell
@@ -139,17 +137,12 @@ Plug 'ajh17/VimCompletesMe'
     autocmd FileType tex call GoTex()
   augroup END
 
-Plug 'SirVer/ultisnips'
-  let g:UltiSnipsExpandTrigger="<c-u>"
-  let g:UltiSnipsJumpForwardTrigger="<c-i>"
-  let g:UltiSnipsJumpBackwardTrigger="<c-o>"
-
 Plug 'tmux-plugins/vim-tmux-focus-events'
 
 Plug 'qpkorr/vim-bufkill'
   " close buffer, but keep split
 
-Plug 'JuliaEditorSupport/julia-vim', { 'for' : 'julia' }
+"########## LANGUAGE SUPPORT ##########"
 
 Plug 'plasticboy/vim-markdown'
   let g:vim_markdown_folding_disabled = 1
@@ -160,6 +153,8 @@ Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app & yarn install', 'for':['ma
   " nmap <leader>md <Plug>MarkdownPreviewToggle
   nmap <leader>m <Plug>MarkdownPreviewToggle
 
+Plug 'JuliaEditorSupport/julia-vim', { 'for' : 'julia' }
+
 " post install (yarn install | npm install) then load plugin only for editing supported files
 Plug 'prettier/vim-prettier', { 'do': 'yarn install' }
   nmap <Leader>p <Nop>
@@ -168,7 +163,6 @@ Plug 'prettier/vim-prettier', { 'do': 'yarn install' }
     autocmd BufWritePre *.js,*.jsx,*.mjs,*.ts,*.tsx,*.css,*.less,*.scss,*.json,*.graphql,*.md,*.vue,*.yaml,*.html PrettierAsync
   augroup end
 
-Plug 'tpope/vim-fugitive'
 
 Plug 'psf/black', { 'branch': 'stable' , 'for' : 'python'}
   function! s:SafeFormat()
@@ -220,8 +214,6 @@ Plug 'numirias/semshi', {'do': ':UpdateRemotePlugins'}
     autocmd FileType python call GoSemshi()
     autocmd ColorScheme * call MySemshiColors()
   augroup end
-
-
 
 Plug 'jpalardy/vim-slime'
   let g:slime_target = "tmux"
@@ -416,29 +408,19 @@ Plug 'tpope/vim-surround'
   "  H(e)llo world -> csw'  -> 'Hello' world  # bug or intended?
   "yss" works on a line"
 
-Plug 'christoomey/vim-system-copy'   " cp/cv for copy paste e.g. cvi = paste inside '
-
 Plug 'tpope/vim-commentary'          " gc code away
   nmap <Bslash> gcc
   vmap <Bslash> gc
 
-Plug 'tpope/vim-repeat'          " Allows repeating some plugins operations using .
+Plug 'rbgrouleff/bclose.vim'
+  " needed by ranger
 
-Plug 'ryanoasis/vim-devicons'       " DevIcons for some plugins
-
-Plug 'preservim/nerdtree'
-  map <F4> :NERDTreeToggle<CR>
-  let NERDTreeMinimalUI = 1
-  let NERDTreeDirArrows = 1
-  let NERDTreeQuitOnOpen = 1
-  " Exit Vim if NERDTree is the only window left.
-  autocmd BufEnter * if tabpagenr('$') == 1 && winnr('$') == 1 && exists('b:NERDTree') && b:NERDTree.isTabTree() |
-    \ quit | endif
-
-Plug 'Xuyuanp/nerdtree-git-plugin'
+Plug 'francoiscabrol/ranger.vim'
+  let g:ranger_map_keys = 0
+  let g:ranger_replace_netrw = 1 " open ranger when vim open a directory
+  nmap <leader>ro :Ranger<CR>
 
 Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
- " let g:onedark_terminal_italics=1
  let g:onedark_hide_endofbuffer=1
 
 " List ends here. Plugins become visible to Vim after this call.
@@ -457,7 +439,7 @@ set smarttab                           " Be smart when using tabs ;)
 set expandtab                          " Replace tabs with spaces
 set shiftwidth=2                       " 1 tab == 2 spaces
 set tabstop=2                          " 1 tab == 2 spaces
-set clipboard=unnamedplus              " send yanks to clipboard
+set clipboard+=unnamedplus              " send yanks to clipboard
 set showcmd                            " Show partial commands in the last line of the screen
 set number                             " Set both types of NUmbering to get hybrid Relative NUmbering"
 set relativenumber
@@ -618,6 +600,14 @@ nnoremap <leader><leader>ex !!bash<CR>
 " getpos is ugly as fuck but... na mindegy
 nnoremap <silent> <leader><leader>vs :exec '! code --goto ' . expand('%:p') . ':' . getpos('.')[1] . ':' . getpos('.')[2]<CR>
 
+" https://vim.fandom.com/wiki/Move_cursor_by_display_lines_when_wrapping
+nnoremap <silent> k gk
+nnoremap <silent> j gj
+nnoremap <silent> $ g$
+
+" Remap VIM 0 to first non-blank character
+noremap 0 ^
+
 " Easier split navigation
 nnoremap <leader>j <C-W><C-J>
 nnoremap <leader>k <C-W><C-K>
@@ -632,9 +622,6 @@ nnoremap <leader>L :rightbelow vsp<CR>
 
 " DISABLE FUCKING EXMODE UNTIL I FIND A BETTER USE FOR Q
 nmap Q <Nop>
-
-" Remap VIM 0 to first non-blank character
-map 0 ^
 
 function! EchoWarning(msg)
   echohl WarningMsg
