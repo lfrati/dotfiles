@@ -259,11 +259,11 @@ Plug 'jpalardy/vim-slime'
   onoremap <silent> ic :<C-U>call <SID>CellTextObj()<CR>
   function! SlimeREPLCheck()
     let res = system("tmux list-panes -F '#{pane_current_command}'")
-    let pos = stridx(res, "python")
+    let pos = stridx(res, "ssh") + stridx(res, "python")
     if pos > 0
       return 1
     else
-      echo "No REPL found in panes."
+      echo "No REPL/SSH found in panes."
       return 0
     endif
   endfunction
@@ -635,6 +635,10 @@ augroup vimrccmds
     autocmd BufWritePost $MYVIMRC nested so % | call EchoWarning("Reloaded " . $MYVIMRC) | redraw
 augroup END
 
+augroup highlight_yank
+    autocmd!
+    au TextYankPost * silent! lua vim.highlight.on_yank { higroup='Search', timeout=80 }
+augroup END
 
 " map esc to exit in terminal mode
 " OFC this messes up fzf.nvim, pressing esc now fucks up floating windows
