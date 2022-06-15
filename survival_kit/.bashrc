@@ -17,5 +17,3 @@ function cd {
 # https://michurin.github.io/xterm256-color-picker/
 # use lightblue to distinguish from my local pink
 export PS1="\[\033[38;5;75m\]\n \w\n ❯ \[\033[0m\]"
-
-
