@@ -39,7 +39,6 @@ syntax on
 
 call plug#begin('~/.vim/plugged')
 
-Plug 'tpope/vim-fugitive'
 
 Plug 'airblade/vim-gitgutter'
   let g:gitgutter_map_keys = 0
@@ -179,7 +178,7 @@ Plug 'psf/black', { 'branch': 'stable' , 'for' : 'python'}
     " I've found a bug where sometimes black messes up Semshi's highlighting
     " this is a horrible fix. God have mercy.
     " autocmd BufWritePost *.py execute ':Semshi highlight'
-    autocmd FileType python nmap <leader><leader>b :call <SID>SafeFormat()<CR>
+    autocmd FileType python nmap <buffer> <leader><leader>b :call <SID>SafeFormat()<CR>
     command! Isort :! isort %
     command! Flake :! autoflake --in-place --remove-all-unused-imports %
   augroup end
@@ -307,6 +306,8 @@ Plug 'junegunn/fzf.vim'
   nnoremap <leader>frf :Rg<CR>
 
 
+Plug 'tpope/vim-fugitive'
+
 Plug 'itchyny/lightline.vim'        " lightweight status line
   let g:lightline = {
       \ 'mode_map': {
@@ -324,24 +325,19 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
       \ },
       \ 'colorscheme': 'onedark',
       \ 'active': {
-      \   'left': [
-      \             [ 'mode', 'paste','readonly'],
-      \             [ 'modified' ],
-      \             [ 'absolutepath' ]
+      \   'left': [[ 'mode', 'paste', 'readonly'],
+      \            [ 'modified', 'gitbranch'],
+      \            [ 'absolutepath' ]
       \           ],
-      \   'right': [
-      \              [ 'lineinfo' ],
-      \            ]
+      \   'right': [[ 'lineinfo'],['filetype']]
       \ },
       \ 'inactive': {
-      \ 'left': [ [ 'absolutepath'] ],
-      \ 'right': [ ['modified'] ]
+      \   'left':  [['absolutepath','modified']],
+      \   'middle':  [['modified']],
+      \   'right': [[]]
       \ },
-      \ 'component_expand':{
-      \   'mymodified' : 'ModifiedFlag',
-      \ },
-      \ 'component_type':{
-      \   'mymodified' : 'error',
+      \ 'component_function': {
+      \   'gitbranch': 'FugitiveHead'
       \ }
       \ }
   let g:lightline.tabline = {
@@ -350,11 +346,8 @@ Plug 'itchyny/lightline.vim'        " lightweight status line
   function! SetupLightlineColors() abort
     " transparent background in statusbar
     let l:palette = lightline#palette()
-    "                                  guibg,     guifg,    ctermbg ctermfg"
-    let l:palette.normal.middle = [ [ '#ABB2BF', '#282C34', '235', '174' ] ]
-    let l:palette.inactive.middle = [ [ '#ABB2BF', '#282C34', '145', '146' ] ]
-    let l:palette.inactive.right = [ [ '#ABB2BF', '#282C34', '235', '204' ] ]
-    " let l:palette.tabline.middle = l:palette.normal.middle
+    "                                    guibg,     guifg,    ctermfg ctermbg"
+    let l:palette.normal.middle =   [ [ '#ABB2BF', '#282C34', '250', '238' ] ]
     call lightline#colorscheme()
   endfunction
   autocmd! VimEnter * call SetupLightlineColors()
@@ -407,6 +400,7 @@ Plug 'tpope/vim-surround'
   "  H(e)llo world -> ysiw' -> 'Hello' world
   "  H(e)llo world -> csw'  -> 'Hello' world  # bug or intended?
   "yss" works on a line"
+  nmap <Leader>w ysiw"
 
 Plug 'tpope/vim-commentary'          " gc code away
   nmap <Bslash> gcc
@@ -490,6 +484,12 @@ endif
 if executable("rg")
     set grepprg=rg\ --vimgrep\ --no-heading
     set grepformat=%f:%l:%c:%m,%f:%l:%m
+endif
+
+" have Vim jump to the last position when reopening a file
+if has("autocmd")
+  au BufReadPost * if line("'\"") > 0 && line("'\"") <= line("$")
+    \| exe "normal! g'\"" | endif
 endif
 
 " set autochdir   " change path to current file, NOTE: SOME PLUGINS MIGHT NOT WORK WITH THIS ON!!!!!
