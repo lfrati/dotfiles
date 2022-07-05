@@ -281,6 +281,10 @@ punzip(){
    unzip $1 | pv -l -s $(unzip -Z -1 $1 | wc -l) > /dev/null;
 }
 
+dirsizes(){
+ du -b -h --max-depth=1 | sort --human-numeric-sort
+}
+
 bindkey -r "^[x"
 bindkey -s '^o' 'ranger\n'
 # Edit line in vim with ctrl-e:
