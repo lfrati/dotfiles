@@ -1,4 +1,3 @@
-
 #!/bin/sh
 #
 # Setup a work space called `dash` with 4 panes
@@ -28,19 +27,12 @@ if [ $? != 0 ]; then
   # Make thin bottom pane for music
   tmux splitw -f -v -p 40
 
-  # Pane 3
-  tmux splitw -h -p 60
-
   # Assign tasks to each pane
   tmux selectp -t 1
   tmux send-keys "htop" C-m
 
-  # tmux selectp -t 2
-  # tmux send-keys "ncmpcpp" C-m
-
-  tmux selectp -t 3
+  tmux selectp -t 2
   tmux send-keys "watch --no-title -n 5 nvidia-smi -i GPU-9806b0a0-d4f8-3fc1-06aa-53716a16702e" C-m
-
 
 fi
 

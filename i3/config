@@ -303,7 +303,7 @@ exec_always --no-startup-id feh --bg-center /home/lapo/dotfiles/arch_vert.png --
 # now set through my keyboard remapping features
 # exec_always --no-startup-id setxkbmap -option caps:swapescape 
 exec_always --no-startup-id xset b off # turn off annoying beeps every time I search a word in a web page
-# exec --no-startup-id autossh -M 0 -f -T -N rvacc # set up reverse-ssh through vacc
+exec --no-startup-id autossh -M 0 -f -T -N rvacc # set up reverse-ssh through vacc
 # exec --no-startup-id xrandr --output HDMI-0 --auto --right-of DVI-D-0 --rotate left
 exec --no-startup-id volumeicon
 exec --no-startup-id dropbox start

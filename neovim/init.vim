@@ -134,7 +134,10 @@ Plug 'ajh17/VimCompletesMe'
     autocmd FileType tex
         \ let b:vcm_omni_pattern = g:vimtex#re#neocomplete
     autocmd FileType tex call GoTex()
+    " make enter select current option
+    inoremap <expr> <CR> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
   augroup END
+  let g:vcm_default_maps = 0
 
 Plug 'tmux-plugins/vim-tmux-focus-events'
 
@@ -178,7 +181,8 @@ Plug 'psf/black', { 'branch': 'stable' , 'for' : 'python'}
     " I've found a bug where sometimes black messes up Semshi's highlighting
     " this is a horrible fix. God have mercy.
     " autocmd BufWritePost *.py execute ':Semshi highlight'
-    autocmd FileType python nmap <buffer> <leader><leader>b :call <SID>SafeFormat()<CR>
+    autocmd! FileType python nmap <buffer> <leader><leader>b :call <SID>SafeFormat()<CR>
+    autocmd BufWritePre *.py call <SID>SafeFormat()
     command! Isort :! isort %
     command! Flake :! autoflake --in-place --remove-all-unused-imports %
   augroup end
@@ -357,15 +361,15 @@ Plug 'easymotion/vim-easymotion' " THE GOD PLUGIN
   " Use easymotion to search
   map  / <Plug>(easymotion-sn)
   omap / <Plug>(easymotion-tn)
-  " These `n` & `N` mappings are options. You do not have to map `n` & `N` to EasyMotion.
-  " Without these mappings, `n` & `N` works fine. (These mappings just provide
-  " different highlight method and have some other features )
-  map  n <Plug>(easymotion-next)
-  map  N <Plug>(easymotion-prev)
   " Turn on case-insensitive feature
   let g:EasyMotion_smartcase = 1
   " Disable mappings
   let g:EasyMotion_do_mapping = 0
+  augroup easymotion_cmds
+    autocmd! easymotion_cmds
+    " Make easymotion compatible with the C-f = tab setup I'm trying.
+    autocmd BufEnter <buffer> EMCommandLineNoreMap <C-f> <Over>(em-scroll-f)
+  augroup END
 
 Plug 'mbbill/undotree'           " More easily navigate vim's poweful undo tree
   if has("persistent_undo")
@@ -416,6 +420,8 @@ Plug 'francoiscabrol/ranger.vim'
 
 Plug 'joshdick/onedark.vim'         " atom inpspired true color theme
  let g:onedark_hide_endofbuffer=1
+
+" Plug 'phaazon/hop.nvim'
 
 " List ends here. Plugins become visible to Vim after this call.
 call plug#end()
@@ -551,7 +557,16 @@ command! Bonly execute '%bdelete|edit #|normal `"'
 
 " convenient mapping to quickly correct the last spelling mistake while in
 " inser mode. Requires :set spell
-inoremap <C-f> <c-g>u<Esc>[s1z=`]a<c-g>u
+" inoremap <C-f> <c-g>u<Esc>[s1z=`]a<c-g>u
+
+" TODO: for now I'm using map, let's see what breaks
+" Tabbing over and over strains my pinky
+" imap <C-f> <Tab> " seems a bit hacky? let's map vim completesme directly
+imap <C-f> <Plug>vim_completes_me_forward
+
+" Tapping esc all the time also strains my pinky
+" Dang, I forgot I use C-d to scroll down
+" map <C-d> <Esc>
 
 " Type a replacement term and press . to repeat the replacement again. Useful
 " for replacing a few instances of the term (comparable to multiple cursors)
@@ -571,6 +586,7 @@ nnoremap <silent> s* :let @/='\<'.expand('<cword>').'\>'<CR>cgn
 " Maybe... s as in Save?
 nnoremap <Leader>s :w<CR>
 nnoremap <Leader>q :q<CR>
+
 " Vim's (d)elete is more like a cut.
 " use leader d to really delete something, i.e. cut to blackhole register _
 nnoremap <leader>d "_d

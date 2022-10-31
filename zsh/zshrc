@@ -120,6 +120,10 @@ export DOTFILES="/home/lapo/dotfiles"
 source $DOTFILES/zsh/zsh_custom
 source $DOTFILES/zsh/prompt
 
+# if [[ $- =~ i ]] && [[ -z "$TMUX" ]] && [[ -n "$SSH_TTY" ]]; then
+#   tmux attach-session -t ssh || tmux new-session -s ssh
+# fi
+
 # --files: List files that would be searched but do not search
 # --no-ignore: Do not respect .gitignore, etc...
 # --hidden: Search hidden files and folders
@@ -136,6 +140,9 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
+# ===================================
+# >>>>>> CODE RELATED EXPORTS <<<<<<<
+# ===================================
 export PATH="$PATH:$(ruby -e 'puts Gem.user_dir')/bin"
 
 export PATH="$PATH:$HOME/go/bin"
@@ -157,6 +164,7 @@ export JULIA_LOAD_PATH=".:$JULIA_LOAD_PATH"
 
 # Until TensorFlow supports Cuda 10.1 I'm renaming 10.1 -> 10.0 and add it to the path
 export LD_LIBRARY_PATH="/usr/local/cuda10:$LD_LIBRARY_PATH"
+
 
 # From archwiki: This will run a ssh-agent process if there is not one already, and save the output thereof.
 # If there is one running already, we retrieve the cached ssh-agent output and evaluate it which will set the 

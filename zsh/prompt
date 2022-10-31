@@ -72,12 +72,7 @@ precmd() {
 }
 
 # show hostname if ssh-ing into this machine (avoid confusion from same themes)
-if [[ -n $SSH_CONNECTION ]]; then
-	local hostname="%{$fg_bold[black]%}%m"
-	export PROMPT='${hostname} %(?.%F{212}.%F{red})❯%f '
-else
-	export PROMPT='%(?.%F{212}.%F{red})❯%f '
-fi
+export PROMPT='%(?.%F{212}.%F{red})❯%f '
 
 export RPROMPT='$VIMODE `git_dirty`%F{241}$vcs_info_msg_0_%f `git_arrows``suspended_jobs`'
 
